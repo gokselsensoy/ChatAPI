@@ -2,15 +2,7 @@
 {
     public enum BranchType
     {
-        Bar,
+        Pub,
         Cafe
-    }
-
-    public enum AnnouncementType
-    {
-        General,
-        Promotion,
-        Event,
-        Discount
     }
 }   

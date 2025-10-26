@@ -71,7 +71,7 @@ try
     // 3. builder.Services.AddStackExchangeRedisCache(options =>
     //    {
     //        options.Configuration = builder.Configuration.GetConnectionString("RedisConnection");
-    //        options.InstanceName = "ProjectBase_"; // Cache key'lerine ön ek
+    //        options.InstanceName = "ChatApp_"; // Cache key'lerine ön ek
     //    });
     // 4. appsettings.json'a "RedisConnection": "localhost:6379" gibi bir connection string ekle.
     #endregion
@@ -83,7 +83,7 @@ try
 
     builder.Services.AddSwaggerGen(options =>
     {
-        options.SwaggerDoc("v1", new Microsoft.OpenApi.Models.OpenApiInfo { Title = "ProjectBase API", Version = "v1" }); // İsteğe bağlı API başlığı
+        options.SwaggerDoc("v1", new Microsoft.OpenApi.Models.OpenApiInfo { Title = "ChatApp API", Version = "v1" }); // İsteğe bağlı API başlığı
 
         var xmlFilename = $"{Assembly.GetExecutingAssembly().GetName().Name}.xml";
         var xmlPath = Path.Combine(AppContext.BaseDirectory, xmlFilename);

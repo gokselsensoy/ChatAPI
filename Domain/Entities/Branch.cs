@@ -1,4 +1,7 @@
 ﻿using Domain.Enums;
+using Domain.Events.BranchEvents;
+using Domain.Events.BrandEvents;
+using Domain.Exceptions;
 using Domain.SeedWork;
 using Domain.ValueObjects;
 
@@ -21,5 +24,68 @@ namespace Domain.Entities
         public ICollection<Announcement> Announcements { get; private set; } = new List<Announcement>();
 
         private Branch() { }
+
+        public static Branch Create(
+            string name,
+            Guid brandId,
+            Address address, // Adres VO'su dışarıda oluşturulup buraya verilir
+            BranchType branchType,
+            string? fileId = null)
+        {
+            if (string.IsNullOrWhiteSpace(name))
+                throw new BranchDomainException("Şube adı (Name) boş olamaz.");
+
+            if (brandId == Guid.Empty)
+                throw new BranchDomainException("Şube bir Markaya (BrandId) bağlı olmalıdır.");
+
+            if (address == null)
+                throw new BranchDomainException("Adres bilgisi (Address) boş olamaz.");
+
+            // Lat/Long zorunluluğunu VO içinde veya burada kontrol edebilirsiniz
+            if (address.Latitude == 0 || address.Longitude == 0)
+                throw new BranchDomainException("Konum bilgisi (Latitude/Longitude) girilmelidir.");
+
+            var branch = new Branch
+            {
+                Id = Guid.NewGuid(),
+                Name = name,
+                BrandId = brandId,
+                Address = address,
+                BranchType = branchType,
+                FileId = fileId
+            };
+
+            branch.AddDomainEvent(new BranchCreatedDomainEvent(branch.Id, branch.BrandId, branch.Name));
+
+            return branch;
+        }
+
+        // --- İş Metotları (Business Logic) ---
+
+        public void ChangeAddress(Address newAddress)
+        {
+            if (newAddress == null)
+                throw new BranchDomainException("Yeni adres boş olamaz.");
+
+            if (Address == newAddress)
+                return;
+
+            Address = newAddress;
+
+            AddDomainEvent(new BranchAddressUpdatedDomainEvent(Id));
+        }
+
+        public void UpdateDetails(string newName, BranchType newType, string? newFileId)
+        {
+            if (string.IsNullOrWhiteSpace(newName))
+                throw new BranchDomainException("Şube adı boş olamaz.");
+
+            Name = newName;
+            BranchType = newType;
+            FileId = newFileId;
+
+            // Detaylar değiştiğinde de event fırlatılabilir
+            AddDomainEvent(new BranchAddressUpdatedDomainEvent(Id));
+        }
     }
 }

@@ -76,10 +76,8 @@ namespace Infrastructure.Persistence.Context
         }
         #endregion
 
-        public DbSet<Order> Orders { get; set; }
-        public DbSet<OrderItem> OrderItems { get; set; }
         public DbSet<Brand> Brands { get; set; }
-        public DbSet<Branch> Branchs { get; set; }
+        public DbSet<Branch> Branches { get; set; }
         public DbSet<User> Users { get; set; }
         public DbSet<ChatRoom> ChatRooms { get; set; }
         public DbSet<ChatRoomInvite> ChatRoomInvites { get; set; }

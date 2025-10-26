@@ -19,6 +19,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <Folder Include="Features\Branchs\EventHandlers\" />
     <Folder Include="Features\Brands\EventHandlers\" />
   </ItemGroup>
 
