@@ -9,8 +9,8 @@ namespace Domain.Entities
         public Guid SenderUserId { get; private set; }
 
         // Navigations
-        public ChatRoom ChatRoom { get; private set; }
-        public User SenderUser { get; private set; }
+        public ChatRoom? ChatRoom { get; private set; }
+        public User? SenderUser { get; private set; }
 
         private ChatRoomMessages() { }
     }

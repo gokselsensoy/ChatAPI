@@ -13,7 +13,7 @@ namespace Domain.Entities
         public Guid BranchId { get; private set; }
 
         // Navigations
-        public Branch Branch { get; private set; }
+        public Branch? Branch { get; private set; }
 
         private Announcement() { }
     }

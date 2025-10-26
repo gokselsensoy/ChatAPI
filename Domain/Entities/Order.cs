@@ -1,5 +1,6 @@
 ﻿using Domain.Enums;
 using Domain.Events;
+using Domain.Events.OrderEvents;
 using Domain.Exceptions;
 using Domain.SeedWork;
 using Domain.ValueObjects;

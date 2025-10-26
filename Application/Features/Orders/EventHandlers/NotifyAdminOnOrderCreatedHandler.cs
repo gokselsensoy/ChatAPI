@@ -1,5 +1,5 @@
 ﻿using Application.Abstractions.Services;
-using Domain.Events;
+using Domain.Events.OrderEvents;
 using MediatR;
 using Microsoft.Extensions.Logging;
 

@@ -1,13 +1,13 @@
 ﻿using MediatR;
 
-namespace Domain.Events
+namespace Domain.Events.OrderEvents
 {
-    public class OrderCreatedDomainEvent : INotification
+    public class OrderUpdatedDomainEvent : INotification
     {
         public Guid OrderId { get; }
         public Guid CustomerId { get; }
 
-        public OrderCreatedDomainEvent(Guid orderId, Guid customerId)
+        public OrderUpdatedDomainEvent(Guid orderId, Guid customerId)
         {
             OrderId = orderId;
             CustomerId = customerId;

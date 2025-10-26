@@ -10,7 +10,7 @@ namespace Domain.Entities
         public Guid BranchId { get; private set; }
 
         // Navigations
-        public Branch Branch { get; private set; }
+        public Branch? Branch { get; private set; }
         public ICollection<ChatRoomMessages> Messages { get; private set; } = new List<ChatRoomMessages>();
         public ICollection<ChatRoomUserMap> ChatRoomUserMaps { get; private set; } = new List<ChatRoomUserMap>();
         public ICollection<ChatRoomInvite> ChatRoomInvites { get; private set; } = new List<ChatRoomInvite>();

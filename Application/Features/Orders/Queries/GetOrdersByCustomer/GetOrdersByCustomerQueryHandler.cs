@@ -1,6 +1,6 @@
 ﻿using Application.Abstractions.EntityRepositories;
 using Application.Features.Orders.Queries.Shared.DTOs;
-using Application.Features.Orders.Queries.Shared.Pagination;
+using Application.Shared.Pagination;
 using MediatR;
 
 namespace Application.Features.Orders.Queries.GetOrdersByCustomer

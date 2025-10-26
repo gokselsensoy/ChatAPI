@@ -10,9 +10,10 @@ namespace Domain.Entities
         public CategoryType CategoryType { get; private set; }
         public decimal Price { get; private set; }
         public Guid MenuId { get; private set; }
+        public string? FileId { get; private set; }
 
         // Navigations
-        public Menu Menu { get; private set; }
+        public Menu? Menu { get; private set; }
 
         private MenuItem() { }
     }

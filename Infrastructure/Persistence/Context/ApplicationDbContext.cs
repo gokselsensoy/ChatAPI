@@ -78,6 +78,16 @@ namespace Infrastructure.Persistence.Context
 
         public DbSet<Order> Orders { get; set; }
         public DbSet<OrderItem> OrderItems { get; set; }
+        public DbSet<Brand> Brands { get; set; }
+        public DbSet<Branch> Branchs { get; set; }
+        public DbSet<User> Users { get; set; }
+        public DbSet<ChatRoom> ChatRooms { get; set; }
+        public DbSet<ChatRoomInvite> ChatRoomInvites { get; set; }
+        public DbSet<ChatRoomMessages> ChatRoomMessages { get; set; }
+        public DbSet<ChatRoomUserMap> ChatRoomUserMaps { get; set; }
+        public DbSet<Menu> Menus { get; set; }
+        public DbSet<MenuItem> MenuItems { get; set; }
+        public DbSet<Announcement> Announcements { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {

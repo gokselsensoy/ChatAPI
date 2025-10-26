@@ -10,8 +10,8 @@ namespace Domain.Entities
         public string Reason { get; private set; }
 
         // Navigations
-        public User User { get; private set; }
-        public Branch Branch { get; private set; }
+        public User? User { get; private set; }
+        public Branch? Branch { get; private set; }
 
         private Blacklist() { }
     }

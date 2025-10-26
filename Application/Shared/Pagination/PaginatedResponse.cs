@@ -1,4 +1,4 @@
-﻿namespace Application.Features.Orders.Queries.Shared.Pagination
+﻿namespace Application.Shared.Pagination
 {
     public class PaginatedResponse<T>
     {

@@ -1,7 +1,7 @@
 ﻿using Application.Abstractions.EntityRepositories;
 using Application.Features.Orders.Queries.GetOrdersByCustomer;
 using Application.Features.Orders.Queries.Shared.DTOs;
-using Application.Features.Orders.Queries.Shared.Pagination;
+using Application.Shared.Pagination;
 using AutoMapper;
 using AutoMapper.QueryableExtensions;
 using Infrastructure.Persistence.Context;

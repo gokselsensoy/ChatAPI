@@ -8,8 +8,8 @@ namespace Domain.Entities
         public Guid UserId { get; private set; }
 
         // Navigations
-        public ChatRoom ChatRoom { get; private set; }
-        public User User { get; private set; }
+        public ChatRoom? ChatRoom { get; private set; }
+        public User? User { get; private set; }
 
         private ChatRoomUserMap() { }
     }
