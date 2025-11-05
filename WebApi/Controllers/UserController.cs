@@ -1,7 +1,10 @@
-﻿using Application.Features.Users.Commands.SetUserCurrentBranch;
+﻿using Application.Exceptions;
+using Application.Features.Users.Commands.SetUserCurrentBranch;
+using Application.Features.Users.Commands.UpdateMyProfile;
 using Application.Features.Users.DTOs;
 using Application.Features.Users.Queries;
 using Application.Features.Users.Queries.GetMyProfile;
+using Domain.Entities;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -19,6 +22,33 @@ namespace WebApi.Controllers
         public UsersController(ISender sender)
         {
             _sender = sender;
+        }
+
+        /// <summary>
+        /// Giriş yapan kullanıcının profil bilgilerini (isim, soyisim, fotoğraf) günceller.
+        /// </summary>
+        [HttpPut("me")]
+        [ProducesResponseType(StatusCodes.Status204NoContent)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        public async Task<IActionResult> UpdateMyProfile([FromBody] UpdateMyProfileRequest request)
+        {
+            // Güvenlik için token'dan alınan ID'leri kullanıyoruz
+            var (userId, identityId) = await GetUserIdsFromToken();
+            if (userId == Guid.Empty)
+                return Unauthorized("Geçersiz token.");
+
+            var command = new UpdateMyProfileCommand
+            {
+                UserId = userId,
+                IdentityId = identityId,
+                FirstName = request.FirstName,
+                LastName = request.LastName,
+                FileId = request.FileId
+            };
+
+            await _sender.Send(command);
+            return NoContent();
         }
 
         /// <summary>
@@ -47,31 +77,55 @@ namespace WebApi.Controllers
         /// </summary>
         [HttpPut("me/check-in")]
         [ProducesResponseType(StatusCodes.Status204NoContent)]
-        [ProducesResponseType(StatusCodes.Status404NotFound)]
         public async Task<IActionResult> CheckInToBranch([FromBody] SetUserBranchRequest request)
         {
-            var identityIdString = User.FindFirstValue(ClaimTypes.NameIdentifier);
-            if (string.IsNullOrEmpty(identityIdString) || !Guid.TryParse(identityIdString, out var identityId))
-            {
-                return Unauthorized("Geçersiz token.");
-            }
-
-            // Önce lokal profili bulmamız lazım
-            var userDto = await _sender.Send(new GetMyProfileQuery { IdentityId = identityId });
+            var (userId, _) = await GetUserIdsFromToken();
+            if (userId == Guid.Empty)
+                return Unauthorized("Geçersiz token veya profil bulunamadı.");
 
             var command = new SetUserCurrentBranchCommand
             {
-                UserId = userDto.Id, // Handler'ın lokal ID'ye (PKey) ihtiyacı var
+                UserId = userId, // Sadece lokal ID'ye ihtiyacımız var
                 NewBranchId = request.BranchId
             };
 
             await _sender.Send(command);
             return NoContent();
         }
-    }
 
-    public class SetUserBranchRequest
-    {
-        public Guid? BranchId { get; set; }
+        #region Helper Methods
+        private async Task<(Guid UserId, Guid IdentityId)> GetUserIdsFromToken()
+        {
+            var identityIdString = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (string.IsNullOrEmpty(identityIdString) || !Guid.TryParse(identityIdString, out var identityId))
+            {
+                return (Guid.Empty, Guid.Empty);
+            }
+
+            try
+            {
+                var userDto = await _sender.Send(new GetMyProfileQuery { IdentityId = identityId });
+                return (userDto.Id, userDto.IdentityId);
+            }
+            catch (NotFoundException)
+            {
+                return (Guid.Empty, Guid.Empty);
+            }
+        }
+        #endregion
+
+        #region Models
+        public class UpdateMyProfileRequest
+        {
+            public string FirstName { get; set; }
+            public string LastName { get; set; }
+            public string? FileId { get; set; }
+        }
+
+        public class SetUserBranchRequest
+        {
+            public Guid? BranchId { get; set; }
+        }
+        #endregion
     }
 }
