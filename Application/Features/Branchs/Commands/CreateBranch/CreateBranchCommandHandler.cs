@@ -4,7 +4,7 @@ using Domain.SeedWork;
 using Domain.ValueObjects;
 using MediatR;
 
-namespace Application.Features.Branchs.Commands
+namespace Application.Features.Branchs.Commands.CreateBranch
 {
     public class CreateBranchCommandHandler : IRequestHandler<CreateBranchCommand, Guid>
     {

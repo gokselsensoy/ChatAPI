@@ -1,14 +1,18 @@
-﻿using Application.DependencyInjection;
-using Infrastructure.DependencyInjection;
-using Integration.DependencyInjection;
+﻿using Application.Abstractions.Services;
+using Application.DependencyInjection;
 using Hangfire;
 using Hangfire.PostgreSql;
+using Infrastructure.DependencyInjection;
+using Infrastructure.Identity.Models;
+using Infrastructure.Persistence.Context;
+using Integration.DependencyInjection;
+using Microsoft.AspNetCore.Identity;
 using Serilog;
 using System.Reflection;
+using System.Security.Claims;
 using WebApi.Hubs;
 using WebApi.Middleware;
 using WebApi.Services;
-using Application.Abstractions.Services;
 
 Log.Logger = new LoggerConfiguration()
     .WriteTo.Console()
@@ -60,10 +64,70 @@ try
     );
     builder.Services.AddHangfireServer();
 
+    #region OpenIddict + Authentication
+    builder.Services.AddIdentityCore<ApplicationUser>(options =>
+    {
+        options.Password.RequireDigit = false;
+        options.Password.RequireLowercase = false;
+        options.Password.RequireNonAlphanumeric = false;
+        options.Password.RequireUppercase = false;
+        options.Password.RequiredLength = 6;
+        options.User.RequireUniqueEmail = true;
+
+        // OpenIddict'in kullanıcı bilgilerini (claim) yönetmesi için
+        options.ClaimsIdentity.UserIdClaimType = ClaimTypes.NameIdentifier;
+        options.ClaimsIdentity.UserNameClaimType = ClaimTypes.Name;
+        options.ClaimsIdentity.EmailClaimType = ClaimTypes.Email;
+    })
+    .AddEntityFrameworkStores<ApplicationDbContext>()
+    .AddDefaultTokenProviders();
+
+    // --- OpenIddict (Auth Server + Validation) ---
+    builder.Services.AddOpenIddict()
+        // 1. Core
+        .AddCore(options =>
+        {
+            options.UseEntityFrameworkCore()
+                   .UseDbContext<ApplicationDbContext>()
+                   .ReplaceDefaultEntities<Guid>();
+        })
+        // 2. Server (Token Basma)
+        .AddServer(options =>
+        {
+            options.SetTokenEndpointUris("/connect/token"); // Token alacağımız endpoint
+
+            // Password Flow (Mobil uygulama için)
+            options.AllowPasswordFlow();
+            options.AllowRefreshTokenFlow();
+
+            options.AddDevelopmentEncryptionCertificate() // Sadece Development için
+                   .AddDevelopmentSigningCertificate();  // Sadece Development için
+
+            options.UseAspNetCore()
+                   .EnableTokenEndpointPassthrough();
+        })
+        .AddValidation(options =>
+        {
+            options.UseLocalServer();
+            options.UseAspNetCore();
+        });
+
+    // --- Authentication (API'yi Korumak için) ---
+    // OpenIddict Validation'a ek olarak, API'mizin [Authorize]
+    // attribute'unu tanıması için bunu ekliyoruz.
+    builder.Services.AddAuthentication(options =>
+    {
+        options.DefaultAuthenticateScheme = OpenIddict.Validation.AspNetCore.OpenIddictValidationAspNetCoreDefaults.AuthenticationScheme;
+        options.DefaultChallengeScheme = OpenIddict.Validation.AspNetCore.OpenIddictValidationAspNetCoreDefaults.AuthenticationScheme;
+    });
+    #endregion
+
+    builder.Services.AddAuthorization();
     builder.Services.AddApplicationServices();
     builder.Services.AddInfrastructureServices(builder.Configuration);
     builder.Services.AddIntegrationServices(builder.Configuration);
     builder.Services.AddDistributedMemoryCache();
+
     #region Redis Info
     // Production için (Redis'e geçmek istersen):
     // 1. Microsoft.Extensions.Caching.StackExchangeRedis paketini ekle
@@ -76,6 +140,7 @@ try
     // 4. appsettings.json'a "RedisConnection": "localhost:6379" gibi bir connection string ekle.
     #endregion
     builder.Services.AddSignalR();
+
     builder.Services.AddScoped<INotificationService, SignalRNotificationService>();
 
     builder.Services.AddControllers();

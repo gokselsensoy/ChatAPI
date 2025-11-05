@@ -1,13 +1,16 @@
 ﻿using Domain.Entities;
 using Domain.SeedWork;
+using Infrastructure.Identity.Models;
 using MediatR;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage;
 using System.Reflection;
 
 namespace Infrastructure.Persistence.Context
 {
-    public class ApplicationDbContext : DbContext, IUnitOfWork
+    public class ApplicationDbContext : IdentityDbContext<ApplicationUser, IdentityRole<Guid>, Guid>, IUnitOfWork
     {
         private readonly IPublisher _publisher;
         private IDbContextTransaction? _currentTransaction;
@@ -89,9 +92,9 @@ namespace Infrastructure.Persistence.Context
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
-            modelBuilder.ApplyConfigurationsFromAssembly(Assembly.GetExecutingAssembly());
-
             base.OnModelCreating(modelBuilder);
+
+            modelBuilder.ApplyConfigurationsFromAssembly(Assembly.GetExecutingAssembly());
         }
 
         private async Task PublishDomainEventsAsync(CancellationToken cancellationToken)

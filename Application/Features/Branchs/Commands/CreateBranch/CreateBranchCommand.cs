@@ -1,7 +1,7 @@
 ﻿using Application.Abstractions.Messaging;
 using Domain.Enums;
 
-namespace Application.Features.Branchs.Commands
+namespace Application.Features.Branchs.Commands.CreateBranch
 {
     public class CreateBranchCommand : ICommand<Guid>
     {

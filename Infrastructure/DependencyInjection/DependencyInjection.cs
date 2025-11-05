@@ -30,6 +30,9 @@ namespace Infrastructure.DependencyInjection
             services.AddScoped<IBranchRepository, BranchRepository>();
             services.AddScoped<IBranchQueryRepository, BranchQueryRepository>();
 
+            services.AddScoped<IUserRepository, UserRepository>();
+            services.AddScoped<IUserQueryRepository, UserQueryRepository>();
+
             // 5. Diğer servisler (Email vb.)
             // services.AddTransient<IEmailService, EmailService>();
 

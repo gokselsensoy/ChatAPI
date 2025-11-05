@@ -1,4 +1,4 @@
-﻿using Application.Features.Branchs.Commands;
+﻿using Application.Features.Branchs.Commands.CreateBranch;
 using Application.Features.Branchs.DTOs;
 using Application.Features.Branchs.Queries.GetBranchById;
 using Application.Features.Branchs.Queries.GetBranchesByBrandId;
@@ -10,11 +10,11 @@ namespace WebApi.Controllers
 {
     [ApiController]
     [Route("api/branches")]
-    public class BranchesController : ControllerBase
+    public class BranchController : ControllerBase
     {
         private readonly ISender _sender;
 
-        public BranchesController(ISender sender)
+        public BranchController(ISender sender)
         {
             _sender = sender;
         }
@@ -25,7 +25,7 @@ namespace WebApi.Controllers
         /// <remarks>
         /// Rota: POST /api/brands/{brandId}/branches
         /// </remarks>
-        [HttpPost("brands/{brandId:guid}/branches")]
+        [HttpPost("brands/{brandId:guid}/branch")]
         [ProducesResponseType(StatusCodes.Status201Created)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         public async Task<IActionResult> Create(Guid brandId, [FromBody] CreateBranchCommand command)
@@ -47,7 +47,7 @@ namespace WebApi.Controllers
         /// <remarks>
         /// Rota: GET /api/branches/{id}
         /// </remarks>
-        [HttpGet("branches/{id:guid}")]
+        [HttpGet("branch/{id:guid}")]
         [ProducesResponseType(typeof(BranchDto), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         public async Task<IActionResult> GetById(Guid id)
@@ -65,7 +65,7 @@ namespace WebApi.Controllers
         /// <remarks>
         /// Rota: GET /api/brands/{brandId}/branches?PageNumber=1&PageSize=10
         /// </remarks>
-        [HttpGet("brands/{brandId:guid}/branches")]
+        [HttpGet("brands/{brandId:guid}/branch")]
         [ProducesResponseType(typeof(PaginatedResponse<BranchDto>), StatusCodes.Status200OK)]
         public async Task<IActionResult> GetByBrandId(Guid brandId, [FromQuery] PaginatedRequest pagination)
         {

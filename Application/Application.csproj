@@ -21,6 +21,7 @@
   <ItemGroup>
     <Folder Include="Features\Branchs\EventHandlers\" />
     <Folder Include="Features\Brands\EventHandlers\" />
+    <Folder Include="Features\Users\EventHandlers\" />
   </ItemGroup>
 
 </Project>
