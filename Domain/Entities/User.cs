@@ -67,7 +67,7 @@ namespace Domain.Entities
             var oldBranchId = BranchId;
             BranchId = newBranchId;
 
-            AddDomainEvent(new UserCheckedInToBranchDomainEvent(Id, newBranchId, oldBranchId));
+            AddDomainEvent(new UserCheckedInToBranchDomainEvent(Id, IdentityId, newBranchId, oldBranchId));
         }
     }
 }

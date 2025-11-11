@@ -1,6 +1,8 @@
 ﻿using Application.Abstractions.QueryRepositories;
+using Application.Exceptions;
 using Application.Features.Branchs.DTOs;
 using Application.Shared.Pagination;
+using Domain.Entities;
 using MediatR;
 
 namespace Application.Features.Branchs.Queries.GetBranchesByBrandId
@@ -16,8 +18,9 @@ namespace Application.Features.Branchs.Queries.GetBranchesByBrandId
 
         public async Task<PaginatedResponse<BranchDto>> Handle(GetBranchesByBrandIdQuery request, CancellationToken cancellationToken)
         {
-            // request'in kendisi PaginatedRequest'ten kalıtım aldığı için
-            // sayfalama bilgilerini (PageNumber, PageSize) içerir.
+            // HATA DÜZELTME: GetByIdAsync -> GetBranchesByBrandIdAsync oldu
+            // 'request'in kendisi PaginatedRequest'ten kalıtım aldığı için
+            // sayfalama parametrelerini de (PageNumber, PageSize) içerir.
             return await _branchQueryRepository.GetBranchesByBrandIdAsync(
                 request.BrandId,
                 request, // Sayfalama parametreleri için request'in kendisini yolluyoruz
