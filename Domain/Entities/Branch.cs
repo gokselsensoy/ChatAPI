@@ -42,8 +42,8 @@ namespace Domain.Entities
                 throw new BranchDomainException("Adres bilgisi (Address) boş olamaz.");
 
             // Lat/Long zorunluluğunu VO içinde veya burada kontrol edebilirsiniz
-            if (address.Latitude == 0 || address.Longitude == 0)
-                throw new BranchDomainException("Konum bilgisi (Latitude/Longitude) girilmelidir.");
+            if (address.Location == null || address.Location.IsEmpty)
+                throw new BranchDomainException("Konum bilgisi (Location) girilmelidir.");
 
             var branch = new Branch
             {

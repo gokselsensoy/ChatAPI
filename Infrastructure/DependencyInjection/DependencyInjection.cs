@@ -17,7 +17,7 @@ namespace Infrastructure.DependencyInjection
             IConfiguration configuration)
         {
             services.AddDbContext<ApplicationDbContext>(options =>
-                options.UseNpgsql(configuration.GetConnectionString("DefaultConnection"),o => o.UseNts()));
+                options.UseNpgsql(configuration.GetConnectionString("DefaultConnection"),o => o.UseNetTopologySuite()));
 
             services.AddScoped<IUnitOfWork>(sp =>
                 sp.GetRequiredService<ApplicationDbContext>());

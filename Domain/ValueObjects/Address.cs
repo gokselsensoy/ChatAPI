@@ -1,5 +1,5 @@
 ﻿using Domain.SeedWork;
-using System.Drawing;
+using NetTopologySuite.Geometries;
 
 namespace Domain.ValueObjects
 {
@@ -31,8 +31,8 @@ namespace Domain.ValueObjects
             Street = street;
             BuildingNumber = buildingNumber;
             ZipCode = zipCode;
-            Location = new Point((double)longitude, (double)latitude) { SRID = 4326 };
             ApartmentNumber = apartmentNumber;
+            Location = new Point((double)longitude, (double)latitude) { SRID = 4326 };
         }
 
         protected override IEnumerable<object> GetEqualityComponents()

@@ -1,5 +1,6 @@
 ﻿using Application.Abstractions.Messaging;
 using Domain.Enums;
+using System.Text.Json.Serialization;
 
 namespace Application.Features.ChatRooms.Commands.CreateChatRoom
 {

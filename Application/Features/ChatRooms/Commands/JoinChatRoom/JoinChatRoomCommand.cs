@@ -1,4 +1,5 @@
 ﻿using Application.Abstractions.Messaging;
+using System.Text.Json.Serialization;
 
 namespace Application.Features.ChatRooms.Commands.JoinChatRoom
 {
