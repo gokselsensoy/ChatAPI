@@ -18,4 +18,12 @@
     <PackageReference Include="Microsoft.Extensions.Caching.Abstractions" Version="9.0.10" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Folder Include="Features\ChatRoomMessages\DTOs\" />
+    <Folder Include="Features\ChatRoomMessages\Queries\" />
+    <Folder Include="Features\ChatRoomMessages\EventHandlers\" />
+    <Folder Include="Features\ChatRoomMessages\Commands\" />
+    <Folder Include="Features\ChatRooms\EventHandlers\" />
+  </ItemGroup>
+
 </Project>

@@ -5,6 +5,7 @@ using AutoMapper;
 using AutoMapper.QueryableExtensions;
 using Infrastructure.Persistence.Context;
 using Microsoft.EntityFrameworkCore;
+using NetTopologySuite.Geometries;
 
 namespace Infrastructure.Persistence.QueryRepositories
 {
@@ -47,6 +48,45 @@ namespace Infrastructure.Persistence.QueryRepositories
                 .ToListAsync(cancellationToken);
 
             return new PaginatedResponse<BranchDto>(items, count, pagination.PageNumber, pagination.PageSize);
+        }
+
+        public async Task<List<NearbyBranchDto>> GetNearbyBranchesAsync(
+            decimal latitude,
+            decimal longitude,
+            int distanceInMeters,
+            CancellationToken cancellationToken = default)
+        {
+            // 1. Kullanıcının konumunu bir 'Point' objesine çevir
+            var userLocation = new Point((double)longitude, (double)latitude) { SRID = 4326 };
+
+            // 2. EF Core + PostGIS LINQ Sorgusu
+            var nearbyBranches = await _context.Branches
+                .AsNoTracking()
+                .Where(b => b.Address.Location.IsWithinDistance(userLocation, distanceInMeters))
+                .OrderBy(b => b.Address.Location.Distance(userLocation))
+                .Select(b => new NearbyBranchDto
+                {
+                    Id = b.Id,
+                    BrandId = b.BrandId,
+                    Name = b.Name,
+                    FileId = b.FileId,
+                    BranchType = b.BranchType.ToString(),
+                    Country = b.Address.Country,
+                    City = b.Address.City,
+                    District = b.Address.District,
+                    Neighborhood = b.Address.Neighborhood,
+                    Street = b.Address.Street,
+                    BuildingNumber = b.Address.BuildingNumber,
+                    ApartmentNumber = b.Address.ApartmentNumber,
+                    ZipCode = b.Address.ZipCode,
+                    Latitude = (decimal)b.Address.Location.Y, // Point'ten geri al
+                    Longitude = (decimal)b.Address.Location.X, // Point'ten geri al
+                    DistanceInMeters = b.Address.Location.Distance(userLocation)
+                })
+                .Take(50)
+                .ToListAsync(cancellationToken);
+
+            return nearbyBranches;
         }
     }
 }

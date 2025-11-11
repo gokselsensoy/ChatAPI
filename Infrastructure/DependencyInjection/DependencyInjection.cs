@@ -17,7 +17,7 @@ namespace Infrastructure.DependencyInjection
             IConfiguration configuration)
         {
             services.AddDbContext<ApplicationDbContext>(options =>
-                options.UseNpgsql(configuration.GetConnectionString("DefaultConnection"))); // UseSqlServer olursa SqlServer paketini indir.
+                options.UseNpgsql(configuration.GetConnectionString("DefaultConnection"),o => o.UseNts()));
 
             services.AddScoped<IUnitOfWork>(sp =>
                 sp.GetRequiredService<ApplicationDbContext>());
@@ -32,6 +32,9 @@ namespace Infrastructure.DependencyInjection
 
             services.AddScoped<IUserRepository, UserRepository>();
             services.AddScoped<IUserQueryRepository, UserQueryRepository>();
+
+            services.AddScoped<IChatRoomRepository, ChatRoomRepository>();
+            services.AddScoped<IChatRoomQueryRepository, ChatRoomQueryRepository>();
 
             // 5. Diğer servisler (Email vb.)
             // services.AddTransient<IEmailService, EmailService>();

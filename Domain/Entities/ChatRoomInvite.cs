@@ -9,6 +9,7 @@ namespace Domain.Entities
         public Guid InviterUserId { get; private set; }
         public Guid InviteeUserId { get; private set; }
         public InviteStatus Status { get; private set; }
+
         // Navigations
         public ChatRoom? ChatRoom { get; private set; }
         public User? InviterUser { get; private set; }

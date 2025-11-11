@@ -4,7 +4,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Infrastructure.Persistence.Repositories
 {
-    public class BaseRepository<T> : IRepository<T> where T : class, IAggregateRoot
+        public class BaseRepository<T> : IRepository<T> where T : Entity
     {
         protected readonly ApplicationDbContext _context;
         private readonly DbSet<T> _dbSet;

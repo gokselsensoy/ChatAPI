@@ -1,4 +1,5 @@
 ﻿using Domain.SeedWork;
+using System.Drawing;
 
 namespace Domain.ValueObjects
 {
@@ -12,8 +13,7 @@ namespace Domain.ValueObjects
         public string BuildingNumber { get; }
         public string? ApartmentNumber { get; }
         public string ZipCode { get; }
-        public decimal Latitude { get; }
-        public decimal Longitude { get; }
+        public Point Location { get; private set; }
 
         private Address() { }
 
@@ -31,8 +31,7 @@ namespace Domain.ValueObjects
             Street = street;
             BuildingNumber = buildingNumber;
             ZipCode = zipCode;
-            Latitude = latitude;
-            Longitude = longitude;
+            Location = new Point((double)longitude, (double)latitude) { SRID = 4326 };
             ApartmentNumber = apartmentNumber;
         }
 
@@ -45,8 +44,7 @@ namespace Domain.ValueObjects
             yield return Street;
             yield return BuildingNumber;
             yield return ZipCode;
-            yield return Latitude;
-            yield return Longitude;
+            yield return Location;
             if (ApartmentNumber != null)
                 yield return ApartmentNumber;
         }

@@ -11,5 +11,11 @@ namespace Application.Abstractions.QueryRepositories
             Guid brandId,
             PaginatedRequest pagination,
             CancellationToken cancellationToken = default);
+
+        Task<List<NearbyBranchDto>> GetNearbyBranchesAsync(
+            decimal latitude,
+            decimal longitude,
+            int distanceInMeters,
+            CancellationToken cancellationToken = default);
     }
 }

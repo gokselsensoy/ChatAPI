@@ -2,6 +2,7 @@
 using Application.Features.Branchs.DTOs;
 using Application.Features.Branchs.Queries.GetBranchById;
 using Application.Features.Branchs.Queries.GetBranchesByBrandId;
+using Application.Features.Branchs.Queries.GetNearbyBranches;
 using Application.Shared.Pagination;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
@@ -78,6 +79,21 @@ namespace WebApi.Controllers
 
             var result = await _sender.Send(query);
             return Ok(result);
+        }
+
+        /// <summary>
+        /// Belirtilen konuma yakın olan şubeleri mesafeye göre sıralı listeler.
+        /// </summary>
+        /// <remarks>
+        /// Rota: GET /api/branches/nearby?Latitude=40.71&Longitude=-74.00&RadiusInMeters=5000
+        /// </remarks>
+        [HttpGet("nearby")]
+        [ProducesResponseType(typeof(List<NearbyBranchDto>), StatusCodes.Status200OK)]
+        public async Task<IActionResult> GetNearby([FromQuery] GetNearbyBranchesQuery query)
+        {
+            // CachingPipelineBehaviour devreye girecek
+            var branches = await _sender.Send(query);
+            return Ok(branches);
         }
     }
 }

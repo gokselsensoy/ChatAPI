@@ -17,7 +17,7 @@ namespace Domain.Entities
 
         // Navigations
         public Branch? Branch { get; private set; }
-        public ICollection<ChatRoomMessages> SentMessages { get; private set; } = new List<ChatRoomMessages>();
+        public ICollection<ChatRoomMessage> SentMessages { get; private set; } = new List<ChatRoomMessage>();
         public ICollection<ChatRoomUserMap> ChatRoomMaps { get; private set; } = new List<ChatRoomUserMap>();
         public ICollection<ChatRoomInvite> SentInvites { get; private set; } = new List<ChatRoomInvite>();
         public ICollection<ChatRoomInvite> ReceivedInvites { get; private set; } = new List<ChatRoomInvite>();

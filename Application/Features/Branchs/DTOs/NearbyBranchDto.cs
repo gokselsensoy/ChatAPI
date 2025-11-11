@@ -1,17 +1,13 @@
-﻿using Domain.Enums;
-using System.Drawing;
-
-namespace Application.Features.Branchs.DTOs
+﻿namespace Application.Features.Branchs.DTOs
 {
-    public class BranchDto
+    public class NearbyBranchDto
     {
+        // BranchDto'dan gelen tüm alanlar
         public Guid Id { get; set; }
         public Guid BrandId { get; set; }
         public string Name { get; set; }
         public string? FileId { get; set; }
-        public BranchType BranchType { get; set; }
-
-        // Adres bilgileri (flattened)
+        public string BranchType { get; set; }
         public string Country { get; set; }
         public string City { get; set; }
         public string District { get; set; }
@@ -20,6 +16,10 @@ namespace Application.Features.Branchs.DTOs
         public string BuildingNumber { get; set; }
         public string? ApartmentNumber { get; set; }
         public string ZipCode { get; set; }
-        public Point Location { get; set; }
+        public decimal Latitude { get; set; }
+        public decimal Longitude { get; set; }
+
+        // Yeni alan
+        public double DistanceInMeters { get; set; }
     }
 }

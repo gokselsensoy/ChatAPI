@@ -84,7 +84,7 @@ namespace Infrastructure.Persistence.Context
         public DbSet<User> Users { get; set; }
         public DbSet<ChatRoom> ChatRooms { get; set; }
         public DbSet<ChatRoomInvite> ChatRoomInvites { get; set; }
-        public DbSet<ChatRoomMessages> ChatRoomMessages { get; set; }
+        public DbSet<ChatRoomMessage> ChatRoomMessages { get; set; }
         public DbSet<ChatRoomUserMap> ChatRoomUserMaps { get; set; }
         public DbSet<Menu> Menus { get; set; }
         public DbSet<MenuItem> MenuItems { get; set; }
