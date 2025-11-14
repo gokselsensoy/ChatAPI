@@ -33,8 +33,8 @@ namespace Application.Features.ChatRooms.Commands.CreateGroupRoom
             var newGroupRoom = ChatRoom.Create(
                 request.Name,
                 request.BranchId,
-                RoomType.Group,
-                request.CreatorUserId
+                RoomType.Group
+                //request.CreatorUserId
             );
             _chatRoomRepository.Add(newGroupRoom);
 

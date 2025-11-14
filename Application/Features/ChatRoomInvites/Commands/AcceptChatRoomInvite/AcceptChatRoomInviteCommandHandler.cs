@@ -44,8 +44,8 @@ namespace Application.Features.ChatRoomInvites.Commands.AcceptChatRoomInvite
             var newPrivateRoom = ChatRoom.Create(
                 "Özel Sohbet", // (İsimler sonradan düzenlenebilir)
                 invite.ChatRoom.BranchId, // Public odanın şubesi
-                RoomType.Private,
-                invite.InviterUserId // Odayı davet eden oluşturmuş sayılır
+                RoomType.Private
+                //invite.InviterUserId // Odayı davet eden oluşturmuş sayılır
             );
             _chatRoomRepository.Add(newPrivateRoom);
 

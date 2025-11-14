@@ -46,14 +46,11 @@ namespace Infrastructure.Persistence.QueryRepositories
                 query = query.Where(m => m.CreatedDate >= DateTime.UtcNow.AddHours(-2));
             }
 
-            query = query
-                .Include(m => m.SenderUser)
-                .OrderByDescending(m => m.CreatedDate)
-                .ProjectTo<ChatRoomMessageDto>(_mapper.ConfigurationProvider, cancellationToken);
-
             var count = await query.CountAsync(cancellationToken);
             var items = await query
-                .Skip((pagination.PageNumber - 1) * pagination.PageSize)
+                .OrderByDescending(m => m.CreatedDate) // Önce sırala
+                .ProjectTo<ChatRoomMessageDto>(_mapper.ConfigurationProvider, cancellationToken) // Sonra DTO'ya çevir
+                .Skip((pagination.PageNumber - 1) * pagination.PageSize) // Sonra sayfala
                 .Take(pagination.PageSize)
                 .ToListAsync(cancellationToken);
 
