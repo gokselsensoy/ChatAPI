@@ -1,4 +1,5 @@
 ﻿using Application.Abstractions.Services;
+using Domain.Enums;
 using Domain.Repositories;
 using Domain.SeedWork;
 using MediatR;
@@ -7,32 +8,37 @@ namespace Application.Features.ChatRooms.Commands.LeaveChatRoom
 {
     public class LeaveChatRoomCommandHandler : IRequestHandler<LeaveChatRoomCommand>
     {
-        private readonly IChatRoomUserMapRepository _mapRepository;
+        private readonly IChatRoomRepository _chatRoomRepository; // DEĞİŞTİ
+        // private readonly IChatRoomUserMapRepository _mapRepository; // SİLİNDİ
         private readonly IUnitOfWork _unitOfWork;
         private readonly INotificationService _notificationService;
 
         public LeaveChatRoomCommandHandler(
-            IChatRoomUserMapRepository mapRepository,
+            IChatRoomRepository chatRoomRepository, // DEĞİŞTİ
             IUnitOfWork unitOfWork,
             INotificationService notificationService)
         {
-            _mapRepository = mapRepository;
+            _chatRoomRepository = chatRoomRepository;
             _unitOfWork = unitOfWork;
             _notificationService = notificationService;
         }
 
         public async Task Handle(LeaveChatRoomCommand request, CancellationToken cancellationToken)
         {
-            var existingMap = await _mapRepository.FindByRoomAndUserAsync(request.RoomId, request.UserId, cancellationToken);
+            var room = await _chatRoomRepository.GetByIdWithUsersAsync(request.RoomId, cancellationToken);
 
-            if (existingMap == null)
-                return; // Zaten üye değil
+            if (room == null)
+                return;
 
-            // Fikrinizdeki gibi, sadece map kaydını siliyoruz.
-            _mapRepository.Delete(existingMap);
+            room.RemoveUser(request.UserId);
+
+            if (room.RoomType == RoomType.Private && !room.ChatRoomUserMaps.Any())
+            {
+                room.SetDeleted();
+            }
+
             await _unitOfWork.SaveChangesAsync(cancellationToken);
 
-            // SignalR'a bildir
             var groupName = $"chatroom:{request.RoomId}";
             await _notificationService.SendNotificationToGroupAsync(
                 groupName,

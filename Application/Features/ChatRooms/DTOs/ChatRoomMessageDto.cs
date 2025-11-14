@@ -8,5 +8,6 @@
         public string SenderUserName { get; set; }
         public string Message { get; set; }
         public DateTime CreatedDate { get; set; }
+        public bool IsMine { get; set; }
     }
 }

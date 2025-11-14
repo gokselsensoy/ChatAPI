@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace Domain.SeedWork
 {
-    public interface IRepository<T> where T : Entity
+    public interface IRepository<T> where T : class, IAggregateRoot
     {
         Task<T?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default);
         Task<List<T>> GetAllAsync(CancellationToken cancellationToken = default);

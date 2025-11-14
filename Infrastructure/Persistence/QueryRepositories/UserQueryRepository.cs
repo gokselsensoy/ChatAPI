@@ -19,7 +19,14 @@ namespace Infrastructure.Persistence.QueryRepositories
             _mapper = mapper;
         }
 
-        // ... (GetByIdAsync aynı) ...
+        public async Task<UserDto?> GetByIdAsync(Guid userId, CancellationToken cancellationToken = default)
+        {
+            return await _context.Users
+                .AsNoTracking()
+                .Where(u => u.Id == userId)
+                .ProjectTo<UserDto>(_mapper.ConfigurationProvider, cancellationToken)
+                .FirstOrDefaultAsync(cancellationToken);
+        }
 
         public async Task<UserDto?> GetByIdentityIdAsync(Guid identityId, CancellationToken cancellationToken = default)
         {
@@ -48,6 +55,14 @@ namespace Infrastructure.Persistence.QueryRepositories
             }
 
             return userProfile;
+        }
+
+        public async Task<Dictionary<Guid, Guid?>> GetUserBranchMapAsync(IEnumerable<Guid> userIds, CancellationToken cancellationToken = default)
+        {
+            return await _context.Users
+                .AsNoTracking()
+                .Where(u => userIds.Contains(u.Id))
+                .ToDictionaryAsync(u => u.Id, u => u.BranchId, cancellationToken);
         }
     }
 }

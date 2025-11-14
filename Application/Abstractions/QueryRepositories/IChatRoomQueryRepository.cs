@@ -1,5 +1,6 @@
 ﻿using Application.Features.ChatRooms.DTOs;
 using Application.Shared.Pagination;
+using Domain.Enums;
 
 namespace Application.Abstractions.QueryRepositories
 {
@@ -9,6 +10,7 @@ namespace Application.Abstractions.QueryRepositories
 
         Task<PaginatedResponse<ChatRoomMessageDto>> GetMessagesForRoomAsync(
         Guid roomId,
+        RoomType roomType,
         PaginatedRequest pagination,
         CancellationToken cancellationToken = default);
     }

@@ -1,4 +1,5 @@
 ﻿using Application.Features.ChatRooms.Commands.CreateChatRoom;
+using Application.Features.ChatRooms.Commands.CreateGroupRoom;
 using Application.Features.ChatRooms.Commands.JoinChatRoom;
 using Application.Features.ChatRooms.Commands.LeaveChatRoom;
 using Application.Features.ChatRooms.Commands.SendMessage;
@@ -143,6 +144,24 @@ namespace WebApi.Controllers
 
             // DTO'yu 201 Created ile geri dön
             return CreatedAtAction(nameof(GetMessages), new { roomId = roomId }, messageDto);
+        }
+
+        /// <summary>
+        /// O anki şubede yeni bir ÖZEL GRUP odası oluşturur ve üyeleri ekler.
+        /// </summary>
+        [HttpPost("create-group-room")]
+        [ProducesResponseType(typeof(Guid), StatusCodes.Status201Created)]
+        public async Task<IActionResult> CreatePrivateGroup([FromBody] CreateGroupRoomCommand command)
+        {
+            var user = await GetMyProfileDto();
+            if (user?.BranchId == null)
+                return BadRequest("Grup oluşturmak için önce bir şubeye check-in yapmalısınız.");
+
+            command.CreatorUserId = user.Id;
+            command.BranchId = user.BranchId.Value;
+
+            var roomId = await _sender.Send(command);
+            return CreatedAtAction(nameof(GetMessages), new { roomId = roomId }, new { id = roomId });
         }
 
         // --- Yardımcı Metot ---

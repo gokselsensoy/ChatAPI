@@ -3,6 +3,7 @@
     public enum RoomType
     {
         Private,
-        Public
+        Public,
+        Group
     }
 }   

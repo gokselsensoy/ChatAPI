@@ -32,12 +32,21 @@ namespace Infrastructure.Persistence.QueryRepositories
 
         public async Task<PaginatedResponse<ChatRoomMessageDto>> GetMessagesForRoomAsync(
             Guid roomId,
+            RoomType roomType,
             PaginatedRequest pagination,
             CancellationToken cancellationToken = default)
         {
             var query = _context.ChatRoomMessages
-                .AsNoTracking()
-                .Where(m => m.ChatRoomId == roomId)
+                            .AsNoTracking()
+                            .Where(m => m.ChatRoomId == roomId);
+
+            // KURAL 6: Public odalar sadece son 2 saati yükler
+            if (roomType == RoomType.Public)
+            {
+                query = query.Where(m => m.CreatedDate >= DateTime.UtcNow.AddHours(-2));
+            }
+
+            query = query
                 .Include(m => m.SenderUser)
                 .OrderByDescending(m => m.CreatedDate)
                 .ProjectTo<ChatRoomMessageDto>(_mapper.ConfigurationProvider, cancellationToken);
