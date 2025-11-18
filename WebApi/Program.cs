@@ -7,6 +7,7 @@ using Infrastructure.Identity.Models;
 using Infrastructure.Persistence.Context;
 using Integration.DependencyInjection;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.OpenApi.Models;
 using Serilog;
 using System.Reflection;
 using System.Security.Claims;
@@ -164,7 +165,29 @@ try
         {
             options.IncludeXmlComments(appXmlPath);
         }
-        // Gerekirse Domain için de eklenebilir.
+        options.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
+        {
+            In = ParameterLocation.Header,
+            Description = "Lütfen 'Bearer ' kelimesini ekleyerek geçerli bir JWT token girin",
+            Name = "Authorization",
+            Type = SecuritySchemeType.ApiKey,
+            Scheme = "Bearer"
+        });
+
+        options.AddSecurityRequirement(new OpenApiSecurityRequirement
+    {
+        {
+            new OpenApiSecurityScheme
+            {
+                Reference = new OpenApiReference
+                {
+                    Type = ReferenceType.SecurityScheme,
+                    Id = "Bearer"
+                }
+            },
+            Array.Empty<string>()
+        }
+    });
     });
 
     builder.Services.AddTransient<GlobalExceptionHandlingMiddleware>();

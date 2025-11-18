@@ -31,7 +31,7 @@ namespace WebApi.Controllers
         /// <summary>
         /// Yeni bir kullanıcı kaydı oluşturur (Identity + Lokal Profil).
         /// </summary>
-        [HttpPost("api/auth/register")]
+        [HttpPost("/register")]
         [ProducesResponseType(typeof(UserDto), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         public async Task<IActionResult> Register([FromBody] RegisterRequestDto request)

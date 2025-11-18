@@ -36,6 +36,8 @@ namespace Infrastructure.DependencyInjection
             services.AddScoped<IChatRoomRepository, ChatRoomRepository>();
             services.AddScoped<IChatRoomQueryRepository, ChatRoomQueryRepository>();
 
+            services.AddScoped<IChatRoomInviteRepository, ChatRoomInviteRepository>();
+
             // 5. Diğer servisler (Email vb.)
             // services.AddTransient<IEmailService, EmailService>();
 

@@ -11,7 +11,7 @@ namespace WebApi.Controllers
 {
     [ApiController]
     [Route("api/chat-invites")]
-    [Authorize]
+    //[Authorize]
     public class ChatRoomInviteController : ControllerBase
     {
         private readonly ISender _sender;

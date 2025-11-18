@@ -18,7 +18,7 @@ namespace WebApi.Controllers
 {
     [ApiController]
     [Route("api/chatrooms")]
-    [Authorize] // Tüm Chat işlemleri üyelik gerektirir
+    //[Authorize] // Tüm Chat işlemleri üyelik gerektirir
     public class ChatRoomController : ControllerBase
     {
         private readonly ISender _sender;

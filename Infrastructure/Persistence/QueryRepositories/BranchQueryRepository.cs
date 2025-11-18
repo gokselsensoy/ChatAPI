@@ -56,14 +56,18 @@ namespace Infrastructure.Persistence.QueryRepositories
             int distanceInMeters,
             CancellationToken cancellationToken = default)
         {
-            // 1. Kullanıcının konumunu bir 'Point' objesine çevir
             var userLocation = new Point((double)longitude, (double)latitude) { SRID = 4326 };
 
-            // 2. EF Core + PostGIS LINQ Sorgusu
-            var nearbyBranches = await _context.Branches
-                .AsNoTracking()
-                .Where(b => b.Address.Location.IsWithinDistance(userLocation, distanceInMeters))
-                .OrderBy(b => b.Address.Location.Distance(userLocation))
+            var query = _context.Branches
+                    .AsNoTracking()
+                    .Where(b => EF.Functions.IsWithinDistance(
+                                    b.Address.Location,
+                                    userLocation,
+                                    distanceInMeters,
+                                    true) // KRİTİK: true = useSpheroid (Metre cinsinden filtrele)
+                    );
+            var nearbyBranches = await query
+                .OrderBy(b => b.Address.Location.Distance(userLocation) * 111195)
                 .Select(b => new NearbyBranchDto
                 {
                     Id = b.Id,
@@ -79,9 +83,9 @@ namespace Infrastructure.Persistence.QueryRepositories
                     BuildingNumber = b.Address.BuildingNumber,
                     ApartmentNumber = b.Address.ApartmentNumber,
                     ZipCode = b.Address.ZipCode,
-                    Latitude = (decimal)b.Address.Location.Y, // Point'ten geri al
-                    Longitude = (decimal)b.Address.Location.X, // Point'ten geri al
-                    DistanceInMeters = b.Address.Location.Distance(userLocation)
+                    Latitude = (decimal)b.Address.Location.Y,
+                    Longitude = (decimal)b.Address.Location.X,
+                    DistanceInMeters = b.Address.Location.Distance(userLocation) * 111195
                 })
                 .Take(50)
                 .ToListAsync(cancellationToken);

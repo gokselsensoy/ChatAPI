@@ -29,8 +29,8 @@ namespace Infrastructure.Persistence.Configurations
                 address.Property(p => p.ZipCode).HasColumnName("Address_ZipCode").HasMaxLength(20);
 
                 address.Property(p => p.Location)
-                    .HasColumnName("Address_Location")
-                    .HasColumnType("geography(Point, 4326)");
+                        .HasColumnName("Address_Location")
+                        .HasColumnType("geometry(Point)");
             });
 
             builder.HasOne(b => b.Brand)
