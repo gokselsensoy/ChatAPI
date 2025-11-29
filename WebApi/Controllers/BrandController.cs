@@ -79,6 +79,7 @@ namespace WebApi.Controllers
             return Ok(brandDto);
         }
 
+        // deneme
         /// <summary>
         /// Tüm markaları listeler.
         /// </summary>
