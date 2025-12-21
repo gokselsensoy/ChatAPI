@@ -7,8 +7,10 @@ using Infrastructure.Identity.Models;
 using Infrastructure.Persistence.Context;
 using Integration.DependencyInjection;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.OpenApi.Models;
 using Serilog;
+using System;
 using System.Reflection;
 using System.Security.Claims;
 using WebApi.Hubs;
@@ -193,6 +195,23 @@ try
     builder.Services.AddTransient<GlobalExceptionHandlingMiddleware>();
 
     var app = builder.Build();
+
+    using (var scope = app.Services.CreateScope())
+    {
+        var services = scope.ServiceProvider;
+        try
+        {
+            var context = services.GetRequiredService<ApplicationDbContext>(); // DbContext adın neyse onu yaz (örn: ApplicationDbContext)
+
+            // Bu komut veritabanı yoksa oluşturur, varsa eksik tabloları ekler (Update-Database komutunun kod halidir)
+            context.Database.Migrate();
+        }
+        catch (Exception ex)
+        {
+            var logger = services.GetRequiredService<ILogger<Program>>();
+            logger.LogError(ex, "Veritabanı migration işlemi sırasında bir hata oluştu.");
+        }
+    }
 
     if (app.Environment.IsDevelopment())
     {
