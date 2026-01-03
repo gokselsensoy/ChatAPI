@@ -26,7 +26,7 @@ namespace WebApi.Controllers
         /// <remarks>
         /// Rota: POST /api/brands/{brandId}/branches
         /// </remarks>
-        [HttpPost("brands/{brandId:guid}/branch")]
+        [HttpPost("brands/{brandId:guid}")]
         [ProducesResponseType(StatusCodes.Status201Created)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         public async Task<IActionResult> Create(Guid brandId, [FromBody] CreateBranchCommand command)
@@ -66,7 +66,7 @@ namespace WebApi.Controllers
         /// <remarks>
         /// Rota: GET /api/brands/{brandId}/branches?PageNumber=1&PageSize=10
         /// </remarks>
-        [HttpGet("brands/{brandId:guid}/branch")]
+        [HttpGet("brands/{brandId:guid}")]
         [ProducesResponseType(typeof(PaginatedResponse<BranchDto>), StatusCodes.Status200OK)]
         public async Task<IActionResult> GetByBrandId(Guid brandId, [FromQuery] PaginatedRequest pagination)
         {
