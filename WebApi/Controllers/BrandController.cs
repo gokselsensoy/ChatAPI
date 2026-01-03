@@ -10,7 +10,7 @@ using Microsoft.AspNetCore.Mvc;
 namespace WebApi.Controllers
 {
     [ApiController]
-    [Route("api/[controller]")]
+    [Route("api/brands")]
     public class BrandsController : ControllerBase
     {
         private readonly ISender _sender;
