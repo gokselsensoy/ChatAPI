@@ -66,7 +66,7 @@ namespace WebApi.Controllers
         /// <summary>
         /// Belirtilen odaya katılır.
         /// </summary>
-        [HttpPost("{roomId:guid}/join")]
+        [HttpPost("join/{roomId:guid}")]
         [ProducesResponseType(StatusCodes.Status204NoContent)]
         public async Task<IActionResult> JoinRoom(Guid roomId)
         {
@@ -88,7 +88,7 @@ namespace WebApi.Controllers
         /// <summary>
         /// Belirtilen odadan ayrılır.
         /// </summary>
-        [HttpPost("{roomId:guid}/leave")]
+        [HttpPost("leave/{roomId:guid}")]
         [ProducesResponseType(StatusCodes.Status204NoContent)]
         public async Task<IActionResult> LeaveRoom(Guid roomId)
         {
@@ -108,7 +108,7 @@ namespace WebApi.Controllers
         /// <summary>
         /// Bir odadaki mesajları sayfalı olarak listeler (Cache'lenmez).
         /// </summary>
-        [HttpGet("{roomId:guid}/messages")]
+        [HttpGet("messages/{roomId:guid}")]
         [ProducesResponseType(typeof(PaginatedResponse<ChatRoomMessageDto>), StatusCodes.Status200OK)]
         public async Task<IActionResult> GetMessages(Guid roomId, [FromQuery] PaginatedRequest pagination)
         {
@@ -125,7 +125,7 @@ namespace WebApi.Controllers
         /// <summary>
         /// Bir odaya mesaj gönderir (SignalR ile yayınlanır).
         /// </summary>
-        [HttpPost("{roomId:guid}/messages")]
+        [HttpPost("messages/{roomId:guid}")]
         [ProducesResponseType(typeof(ChatRoomMessageDto), StatusCodes.Status201Created)]
         public async Task<IActionResult> SendMessage(Guid roomId, [FromBody] SendMessageRequest request)
         {

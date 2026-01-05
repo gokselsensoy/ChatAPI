@@ -42,7 +42,7 @@ namespace WebApi.Controllers
         /// <summary>
         /// Gelen bir daveti kabul eder ve yeni bir özel oda oluşturur.
         /// </summary>
-        [HttpPost("{inviteId:guid}/accept")]
+        [HttpPost("accept/{inviteId:guid}")]
         [ProducesResponseType(typeof(Guid), StatusCodes.Status200OK)] // Yeni oda ID'si
         public async Task<IActionResult> AcceptInvite(Guid inviteId)
         {

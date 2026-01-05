@@ -10,7 +10,7 @@ using Microsoft.AspNetCore.Mvc;
 namespace WebApi.Controllers
 {
     [ApiController]
-    [Route("api/[controller]")]
+    [Route("api/brands")]
     public class BrandsController : ControllerBase
     {
         private readonly ISender _sender;
@@ -38,7 +38,7 @@ namespace WebApi.Controllers
         /// <summary>
         /// Marka sahibini günceller.
         /// </summary>
-        [HttpPut("{id:guid}/owner")]
+        [HttpPut("owner/{id:guid}")]
         [ProducesResponseType(StatusCodes.Status204NoContent)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
