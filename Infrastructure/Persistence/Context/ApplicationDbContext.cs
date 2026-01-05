@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage;
+using OpenIddict.EntityFrameworkCore.Models;
 using System.Reflection;
 
 namespace Infrastructure.Persistence.Context
@@ -93,6 +94,13 @@ namespace Infrastructure.Persistence.Context
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
+
+            modelBuilder.UseOpenIddict<
+                OpenIddictEntityFrameworkCoreApplication<Guid>,
+                OpenIddictEntityFrameworkCoreAuthorization<Guid>,
+                OpenIddictEntityFrameworkCoreScope<Guid>,
+                OpenIddictEntityFrameworkCoreToken<Guid>,
+                Guid>();
 
             modelBuilder.ApplyConfigurationsFromAssembly(Assembly.GetExecutingAssembly());
         }

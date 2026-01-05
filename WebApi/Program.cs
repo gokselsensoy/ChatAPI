@@ -13,6 +13,7 @@ using Serilog;
 using System;
 using System.Reflection;
 using System.Security.Claims;
+using WebApi;
 using WebApi.Hubs;
 using WebApi.Middleware;
 using WebApi.Services;
@@ -83,6 +84,7 @@ try
         options.ClaimsIdentity.EmailClaimType = ClaimTypes.Email;
     })
     .AddEntityFrameworkStores<ApplicationDbContext>()
+    .AddSignInManager<SignInManager<ApplicationUser>>()
     .AddDefaultTokenProviders();
 
     // --- OpenIddict (Auth Server + Validation) ---
@@ -103,8 +105,11 @@ try
             options.AllowPasswordFlow();
             options.AllowRefreshTokenFlow();
 
-            options.AddDevelopmentEncryptionCertificate() // Sadece Development için
-                   .AddDevelopmentSigningCertificate();  // Sadece Development için
+            //options.AddDevelopmentEncryptionCertificate() // Sadece Development için
+            //       .AddDevelopmentSigningCertificate();  // Sadece Development için
+
+            options.AddEphemeralEncryptionKey()
+                    .AddEphemeralSigningKey();
 
             options.UseAspNetCore()
                    .EnableTokenEndpointPassthrough();
@@ -126,6 +131,7 @@ try
     #endregion
 
     builder.Services.AddAuthorization();
+    builder.Services.AddHostedService<OpenIddictWorker>();
     builder.Services.AddApplicationServices();
     builder.Services.AddInfrastructureServices(builder.Configuration);
     builder.Services.AddIntegrationServices(builder.Configuration);
@@ -167,6 +173,7 @@ try
         {
             options.IncludeXmlComments(appXmlPath);
         }
+
         options.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
         {
             In = ParameterLocation.Header,
@@ -196,28 +203,18 @@ try
 
     var app = builder.Build();
 
-    using (var scope = app.Services.CreateScope())
+    //if (app.Environment.IsDevelopment())
+    //{
+    //    app.UseSwagger();
+    //    app.UseSwaggerUI();
+    //}
+    app.UseDeveloperExceptionPage(); // Hata olursa tarayıcıda detaylı görelim (Çok Önemli!)
+    app.UseSwagger();
+    app.UseSwaggerUI(c =>
     {
-        var services = scope.ServiceProvider;
-        try
-        {
-            var context = services.GetRequiredService<ApplicationDbContext>(); // DbContext adın neyse onu yaz (örn: ApplicationDbContext)
-
-            // Bu komut veritabanı yoksa oluşturur, varsa eksik tabloları ekler (Update-Database komutunun kod halidir)
-            context.Database.Migrate();
-        }
-        catch (Exception ex)
-        {
-            var logger = services.GetRequiredService<ILogger<Program>>();
-            logger.LogError(ex, "Veritabanı migration işlemi sırasında bir hata oluştu.");
-        }
-    }
-
-    if (app.Environment.IsDevelopment())
-    {
-        app.UseSwagger();
-        app.UseSwaggerUI();
-    }
+        c.SwaggerEndpoint("/swagger/v1/swagger.json", "ChatApp API V1");
+        c.RoutePrefix = string.Empty; // Swagger'ı ana sayfada (root) açar
+    });
 
     app.UseHttpsRedirection();
     app.UseRouting();

@@ -17,6 +17,8 @@
     <PackageReference Include="NetTopologySuite" Version="2.6.0" />
     <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="9.0.4" />
     <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL.NetTopologySuite" Version="9.0.4" />
+    <PackageReference Include="OpenIddict.EntityFrameworkCore" Version="7.1.0" />
+    <PackageReference Include="OpenIddict.EntityFrameworkCore.Models" Version="7.1.0" />
   </ItemGroup>
 
   <ItemGroup>
