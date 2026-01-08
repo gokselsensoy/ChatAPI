@@ -7,7 +7,7 @@ namespace Application.Features.Brands.Queries.GetBrandByOwnerUserId
     {
         public Guid OwnerUserId { get; set; }
 
-        public string CacheKey => $"brand:{BrandId}";
+        public string CacheKey => $"brand:{OwnerUserId}";
         public TimeSpan CacheDuration => TimeSpan.FromMinutes(10);
     }
 }

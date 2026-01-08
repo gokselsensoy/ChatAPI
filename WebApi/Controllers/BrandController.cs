@@ -4,6 +4,7 @@ using Application.Features.Brands.Commands.UpdateBrand;
 using Application.Features.Brands.DTOs;
 using Application.Features.Brands.Queries.GetAllBrands;
 using Application.Features.Brands.Queries.GetBrandById;
+using Application.Features.Brands.Queries.GetBrandByOwnerUserId;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
 

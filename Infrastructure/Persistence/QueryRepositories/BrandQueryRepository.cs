@@ -37,5 +37,14 @@ namespace Infrastructure.Persistence.QueryRepositories
                 .ProjectTo<BrandDto>(_mapper.ConfigurationProvider, cancellationToken)
                 .ToListAsync(cancellationToken);
         }
+
+        public async Task<BrandDto?> GetByOwnerUserIdAsync(Guid ownerUserId, CancellationToken cancellationToken = default)
+        {
+            return await _context.Brands
+                .AsNoTracking() // Okuma işlemi olduğu için takibi kapatıyoruz (Performans)
+                .Where(b => b.OwnerUserId == ownerUserId)
+                .ProjectTo<BrandDto>(_mapper.ConfigurationProvider) // Entity -> DTO dönüşümü
+                .FirstOrDefaultAsync(cancellationToken);
+        }
     }
 }
