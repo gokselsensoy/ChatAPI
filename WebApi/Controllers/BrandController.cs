@@ -83,7 +83,7 @@ namespace WebApi.Controllers
         /// <summary>
         /// Belirtilen ownerUserId'ye sahip markayı getirir.
         /// </summary>
-        [HttpGet("{ownerUserId:guid}")]
+        [HttpGet("by-owner/{ownerUserId:guid}")]
         [ProducesResponseType(typeof(BrandDto), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         public async Task<IActionResult> GetByOwnerUserId(Guid ownerUserId)
