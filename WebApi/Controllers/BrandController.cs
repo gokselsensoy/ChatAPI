@@ -79,6 +79,22 @@ namespace WebApi.Controllers
             return Ok(brandDto);
         }
 
+        /// <summary>
+        /// Belirtilen ownerUserId'ye sahip markayı getirir.
+        /// </summary>
+        [HttpGet("{ownerUserId:guid}")]
+        [ProducesResponseType(typeof(BrandDto), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        public async Task<IActionResult> GetByOwnerUserId(Guid ownerUserId)
+        {
+            var query = new GetBrandByOwnerUserIdQuery { OwnerUserId = ownerUserId };
+            var brandDto = await _sender.Send(query);
+
+            // NotFoundException, GlobalExceptionHandlingMiddleware
+            // tarafından yakalanıp 404'e çevrilir.
+            return Ok(brandDto);
+        }
+
         // deneme
         /// <summary>
         /// Tüm markaları listeler.
