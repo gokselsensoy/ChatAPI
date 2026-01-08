@@ -6,5 +6,6 @@ namespace Application.Abstractions.QueryRepositories
     {
         Task<BrandDto?> GetByIdAsync(Guid brandId, CancellationToken cancellationToken = default);
         Task<List<BrandDto>> GetAllAsync(CancellationToken cancellationToken = default);
+        Task<BrandDto?> GetByOwnerUserIdAsync(Guid ownerUserId, CancellationToken cancellationToken = default);
     }
 }
