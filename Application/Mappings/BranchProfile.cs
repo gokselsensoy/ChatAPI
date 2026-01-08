@@ -17,7 +17,8 @@ namespace Application.Mappings
                 .ForMember(dest => dest.BuildingNumber, opt => opt.MapFrom(src => src.Address.BuildingNumber))
                 .ForMember(dest => dest.ApartmentNumber, opt => opt.MapFrom(src => src.Address.ApartmentNumber))
                 .ForMember(dest => dest.ZipCode, opt => opt.MapFrom(src => src.Address.ZipCode))
-                .ForMember(dest => dest.Location, opt => opt.MapFrom(src => src.Address.Location));
+                .ForMember(dest => dest.Latitude, opt => opt.MapFrom(src => (decimal)src.Address.Location.Y))
+                .ForMember(dest => dest.Longitude, opt => opt.MapFrom(src => (decimal)src.Address.Location.X));
         }
     }
 }

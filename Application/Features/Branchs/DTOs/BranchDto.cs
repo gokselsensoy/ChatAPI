@@ -1,5 +1,4 @@
 ﻿using Domain.Enums;
-using NetTopologySuite.Geometries;
 
 namespace Application.Features.Branchs.DTOs
 {
@@ -20,6 +19,7 @@ namespace Application.Features.Branchs.DTOs
         public string BuildingNumber { get; set; }
         public string? ApartmentNumber { get; set; }
         public string ZipCode { get; set; }
-        public Point Location { get; set; }
+        public decimal Latitude { get; set; }
+        public decimal Longitude { get; set; }
     }
 }
