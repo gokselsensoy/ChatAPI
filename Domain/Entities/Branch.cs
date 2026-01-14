@@ -60,6 +60,39 @@ namespace Domain.Entities
             return branch;
         }
 
+        public static Branch Update(
+            string name,
+            Guid brandId,
+            Guid branchId,
+            Address address,
+            BranchType branchType,
+            string? fileId = null)
+        {
+            if (string.IsNullOrWhiteSpace(name))
+                throw new BranchDomainException("Şube adı (Name) boş olamaz.");
+
+            if (brandId == Guid.Empty)
+                throw new BranchDomainException("Şube bir Markaya (BrandId) bağlı olmalıdır.");
+
+            if (address == null) 
+                throw new BranchDomainException("Adres bilgisi (Address) boş olamaz.");
+
+            // Lat/Long zorunluluğunu VO içinde veya burada kontrol edebilirsiniz
+            if (address.Location == null || address.Location.IsEmpty)
+                throw new BranchDomainException("Konum bilgisi (Location) boş olamaz.");
+
+            var branch = GetById(branchId);
+            branch.Name = name;
+            branch.BrandId = brandId;
+            branch.Address = address;
+            branch.BranchType = branchType;
+            branch.FileId = fileId;
+
+            branch.AddDomainEvent(new BranchUpdatedDomainEvent(branch.Id, branch.BrandId, branch.Name));
+
+            return branch;
+        }
+
         // --- İş Metotları (Business Logic) ---
 
         public void ChangeAddress(Address newAddress)

@@ -42,6 +42,33 @@ namespace WebApi.Controllers
             return CreatedAtAction(nameof(GetById), new { id = branchId }, command);
         }
 
+            /// <summary>
+        /// Belirtilen BranchId'ye ait olan şubeyi günceller.
+        /// </summary>
+        /// <remarks>
+        /// Rota: POST /api/branches/{branchId}
+        /// </remarks>
+        [HttpPost("branches/{branchId:guid}")]
+        [ProducesResponseType(StatusCodes.Status201Created)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        public async Task<IActionResult> Update(Guid branchId, [FromBody] UpdateBranchCommand command)
+        {
+            // URL'den gelen branchId'yi Command objesine set ediyoruz.
+            // ValidationPipeline geri kalanını (Lat/Long zorunlu mu vb.) kontrol eder.
+            if(command.BranchId != branchId)
+            {
+                return BadRequest("BranchId uyuşmazlığı");
+            }
+            command.BranchId = branchId;
+
+            var branch = await _sender.Send(command);
+
+            // 201 Created yanıtı ile yeni şubenin 'GetById' endpoint'ine yönlendiriyoruz
+            //
+
+            return Ok(branch);
+        }
+
         /// <summary>
         /// Belirtilen ID'ye sahip şubeyi getirir.
         /// </summary>
