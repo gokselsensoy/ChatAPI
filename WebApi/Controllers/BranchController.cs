@@ -1,4 +1,5 @@
 ﻿using Application.Features.Branchs.Commands.CreateBranch;
+using Application.Features.Branchs.Commands.UpdateBranch;
 using Application.Features.Branchs.DTOs;
 using Application.Features.Branchs.Queries.GetBranchById;
 using Application.Features.Branchs.Queries.GetBranchesByBrandId;
@@ -48,25 +49,24 @@ namespace WebApi.Controllers
         /// <remarks>
         /// Rota: POST /api/branches/{branchId}
         /// </remarks>
-        [HttpPost("branches/{branchId:guid}")]
-        [ProducesResponseType(StatusCodes.Status201Created)]
+        [HttpPut("branches/{branchId:guid}")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
         public async Task<IActionResult> Update(Guid branchId, [FromBody] UpdateBranchCommand command)
         {
-            // URL'den gelen branchId'yi Command objesine set ediyoruz.
-            // ValidationPipeline geri kalanını (Lat/Long zorunlu mu vb.) kontrol eder.
-            if(command.BranchId != branchId)
+            // URL'deki ID ile Body'deki ID uyuşmalı
+            if (command.BranchId != Guid.Empty && command.BranchId != branchId)
             {
-                return BadRequest("BranchId uyuşmazlığı");
+                return BadRequest("URL'deki ID ile gönderilen veri uyuşmuyor.");
             }
+
             command.BranchId = branchId;
 
-            var branch = await _sender.Send(command);
+            // Handler çalışsın
+            await _sender.Send(command);
 
-            // 201 Created yanıtı ile yeni şubenin 'GetById' endpoint'ine yönlendiriyoruz
-            //
-
-            return Ok(branch);
+            return Ok(new { Message = "Şube başarıyla güncellendi.", Id = branchId });
         }
 
         /// <summary>

@@ -1,9 +1,10 @@
 using Application.Abstractions.Messaging;
+using Domain.Entities;
 using Domain.Enums;
 
 namespace Application.Features.Branchs.Commands.UpdateBranch
 {
-    public class UpdateBranchCommand : ICommand<Guid>
+    public class UpdateBranchCommand : ICommand<Branch>
     {
         // Route'dan alınacak
         public Guid BrandId { get; set; }
