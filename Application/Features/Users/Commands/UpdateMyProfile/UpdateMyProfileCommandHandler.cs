@@ -1,4 +1,5 @@
-﻿using Application.Exceptions;
+﻿using Application.Abstractions.Services;
+using Application.Exceptions;
 using Domain.Entities;
 using Domain.Repositories;
 using Domain.SeedWork;
@@ -10,6 +11,7 @@ namespace Application.Features.Users.Commands.UpdateMyProfile
     {
         private readonly IUserRepository _userRepository;
         private readonly IUnitOfWork _unitOfWork;
+        private readonly IIdentityService _identityService;
 
         public UpdateMyProfileCommandHandler(IUserRepository userRepository, IUnitOfWork unitOfWork)
         {
@@ -28,8 +30,19 @@ namespace Application.Features.Users.Commands.UpdateMyProfile
             if (user.IdentityId != request.IdentityId)
                 throw new UnauthorizedAccessException("Bu profili güncelleme yetkiniz yok.");
 
+            if (user.UserName != request.UserName)
+            {
+                bool isUnique = await _identityService.IsUserNameUniqueAsync(request.UserName, user.IdentityId);
+                if (!isUnique)
+                {
+                    // Bu hata Middleware tarafından yakalanıp Mobile 400 dönecektir.
+                    throw new Exception("Bu kullanıcı adı zaten kullanımda.");
+                    // Veya projende varsa: throw new BusinessRuleException(...)
+                }
+            }
+
             // 3. Domain metodunu çağır
-            user.UpdateProfile(request.FirstName, request.LastName, request.FileId);
+            user.UpdateProfile(request.UserName, request.FirstName, request.LastName, request.FileId);
 
             // 4. Değişiklikleri kaydet (Bu, 'UserProfileUpdatedDomainEvent'i tetikler)
             await _unitOfWork.SaveChangesAsync(cancellationToken);

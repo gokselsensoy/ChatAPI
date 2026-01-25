@@ -50,13 +50,14 @@ namespace Domain.Entities
             return user;
         }
 
-        public void UpdateProfile(string firstName, string lastName, string? fileId)
+        public void UpdateProfile(string userName, string firstName, string lastName, string? fileId)
         {
+            UserName = userName;
             FirstName = firstName;
             LastName = lastName;
             FileId = fileId;
 
-            AddDomainEvent(new UserProfileUpdatedDomainEvent(Id, IdentityId));
+            AddDomainEvent(new UserProfileUpdatedDomainEvent(Id, IdentityId, userName));
         }
 
         public void CheckInToBranch(Guid? newBranchId)

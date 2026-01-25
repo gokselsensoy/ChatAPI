@@ -108,8 +108,6 @@ try
             //options.AddDevelopmentEncryptionCertificate() // Sadece Development için
             //       .AddDevelopmentSigningCertificate();  // Sadece Development için
 
-            options.SetAccessTokenLifetime(TimeSpan.FromSeconds(20));
-
             options.AddEphemeralEncryptionKey()
                     .AddEphemeralSigningKey();
 

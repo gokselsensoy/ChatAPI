@@ -19,6 +19,26 @@ namespace Application.Mappings
                 .ForMember(dest => dest.ZipCode, opt => opt.MapFrom(src => src.Address.ZipCode))
                 .ForMember(dest => dest.Latitude, opt => opt.MapFrom(src => (decimal)src.Address.Location.Y))
                 .ForMember(dest => dest.Longitude, opt => opt.MapFrom(src => (decimal)src.Address.Location.X));
+
+            CreateMap<Branch, NearbyBranchDto>()
+                .ForMember(dest => dest.Country, opt => opt.MapFrom(src => src.Address.Country))
+                .ForMember(dest => dest.City, opt => opt.MapFrom(src => src.Address.City))
+                .ForMember(dest => dest.District, opt => opt.MapFrom(src => src.Address.District))
+                .ForMember(dest => dest.Neighborhood, opt => opt.MapFrom(src => src.Address.Neighborhood))
+                .ForMember(dest => dest.Street, opt => opt.MapFrom(src => src.Address.Street))
+                .ForMember(dest => dest.BuildingNumber, opt => opt.MapFrom(src => src.Address.BuildingNumber))
+                .ForMember(dest => dest.ApartmentNumber, opt => opt.MapFrom(src => src.Address.ApartmentNumber))
+                .ForMember(dest => dest.ZipCode, opt => opt.MapFrom(src => src.Address.ZipCode))
+                .ForMember(dest => dest.Latitude, opt => opt.MapFrom(src => (decimal)src.Address.Location.Y))
+                .ForMember(dest => dest.Longitude, opt => opt.MapFrom(src => (decimal)src.Address.Location.X))
+
+                // Şimdilik Default False Dönecek Alanlar
+                .ForMember(dest => dest.ActivePool, opt => opt.MapFrom(src => false))
+                .ForMember(dest => dest.ActiveEvent, opt => opt.MapFrom(src => false))
+                .ForMember(dest => dest.FullnessLevel, opt => opt.Ignore())
+                .ForMember(dest => dest.FullnessLabel, opt => opt.Ignore())
+                .ForMember(dest => dest.DistanceInMeters, opt => opt.Ignore())
+                .ForMember(dest => dest.Tags, opt => opt.Ignore());
         }
     }
 }

@@ -56,40 +56,52 @@ namespace Infrastructure.Persistence.QueryRepositories
             int distanceInMeters,
             CancellationToken cancellationToken = default)
         {
+            // 1. Konum nesnesini oluştur
             var userLocation = new Point((double)longitude, (double)latitude) { SRID = 4326 };
 
+            var random = new Random();
+            int fullness = random.Next(1, 10) * 10; // 10, 20, ..., 100
+            var availableTags = new List<string>
+            {
+                "Popüler", "Canlı Müzik", "Happy Hour", "Quiz Night",
+                "Wi-Fi", "Maç Yayını", "Bahçe", "Rooftop", "Kokteyl Bar", "Vegan"
+            };
+
+            // 2. Sorguyu Hazırla (Filtreleme)
             var query = _context.Branches
                     .AsNoTracking()
                     .Where(b => EF.Functions.IsWithinDistance(
                                     b.Address.Location,
                                     userLocation,
                                     distanceInMeters,
-                                    true) // KRİTİK: true = useSpheroid (Metre cinsinden filtrele)
+                                    true) // true = useSpheroid (Metre cinsinden filtrele)
                     );
+
+            query = query.OrderBy(b => b.Address.Location.Distance(userLocation));
+
             var nearbyBranches = await query
-                .OrderBy(b => b.Address.Location.Distance(userLocation) * 111195)
-                .Select(b => new NearbyBranchDto
-                {
-                    Id = b.Id,
-                    BrandId = b.BrandId,
-                    Name = b.Name,
-                    FileId = b.FileId,
-                    BranchType = b.BranchType.ToString(),
-                    Country = b.Address.Country,
-                    City = b.Address.City,
-                    District = b.Address.District,
-                    Neighborhood = b.Address.Neighborhood,
-                    Street = b.Address.Street,
-                    BuildingNumber = b.Address.BuildingNumber,
-                    ApartmentNumber = b.Address.ApartmentNumber,
-                    ZipCode = b.Address.ZipCode,
-                    Latitude = (decimal)b.Address.Location.Y,
-                    Longitude = (decimal)b.Address.Location.X,
-                    DistanceInMeters = b.Address.Location.Distance(userLocation) * 111195
-                })
-                .Take(50)
+                .ProjectTo<NearbyBranchDto>(_mapper.ConfigurationProvider)
+                .Take(10)
                 .ToListAsync(cancellationToken);
 
+            foreach (var branch in nearbyBranches)
+            {
+                var branchLocation = new Point((double)branch.Longitude, (double)branch.Latitude) { SRID = 4326 };
+
+                branch.DistanceInMeters = branchLocation.Distance(userLocation) * 111195;
+
+                branch.FullnessLevel = fullness;
+
+                if (fullness <= 30) branch.FullnessLabel = "Sakin";
+                else if (fullness <= 70) branch.FullnessLabel = "Hareketli";
+                else branch.FullnessLabel = "Çok Yoğun";
+
+                branch.Tags = availableTags
+                    .OrderBy(x => random.Next())
+                    .Take(random.Next(2, 4))
+                    .ToList();
+            }
+            
             return nearbyBranches;
         }
     }

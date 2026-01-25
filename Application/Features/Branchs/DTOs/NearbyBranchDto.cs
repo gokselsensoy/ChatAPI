@@ -18,8 +18,14 @@
         public string ZipCode { get; set; }
         public decimal Latitude { get; set; }
         public decimal Longitude { get; set; }
+        
+        public bool ActivePool { get; set; }
+        public bool ActiveEvent { get; set; }
 
-        // Yeni alan
+        public int FullnessLevel { get; set; }
+        public string FullnessLabel { get; set; }
+
         public double DistanceInMeters { get; set; }
+        public List<string> Tags { get; set; } = new List<string>();
     }
 }
