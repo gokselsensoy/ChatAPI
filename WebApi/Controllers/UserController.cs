@@ -31,23 +31,18 @@ namespace WebApi.Controllers
         [ProducesResponseType(StatusCodes.Status204NoContent)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
-        public async Task<IActionResult> UpdateMyProfile([FromBody] UpdateMyProfileRequest request)
+        public async Task<IActionResult> UpdateMyProfile([FromBody] UpdateMyProfileCommand command)
         {
-            // Güvenlik için token'dan alınan ID'leri kullanıyoruz
+            // 1. Token'dan ID'leri al
             var (userId, identityId) = await GetUserIdsFromToken();
             if (userId == Guid.Empty)
                 return Unauthorized("Geçersiz token.");
 
-            var command = new UpdateMyProfileCommand
-            {
-                UserId = userId,
-                IdentityId = identityId,
-                FirstName = request.FirstName,
-                LastName = request.LastName,
-                FileId = request.FileId
-            };
+            command.UserId = userId;
+            command.IdentityId = identityId;
 
             await _sender.Send(command);
+
             return NoContent();
         }
 
@@ -117,6 +112,7 @@ namespace WebApi.Controllers
         #region Models
         public class UpdateMyProfileRequest
         {
+            public string UserName { get; set; }
             public string FirstName { get; set; }
             public string LastName { get; set; }
             public string? FileId { get; set; }
