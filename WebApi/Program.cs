@@ -68,6 +68,8 @@ try
     );
     builder.Services.AddHangfireServer();
 
+    builder.Services.AddHttpContextAccessor();
+
     #region OpenIddict + Authentication
     builder.Services.AddIdentityCore<ApplicationUser>(options =>
     {

@@ -34,6 +34,7 @@ namespace Infrastructure.Persistence.QueryRepositories
             Guid roomId,
             RoomType roomType,
             PaginatedRequest pagination,
+            Guid currentUserId,
             CancellationToken cancellationToken = default)
         {
             var query = _context.ChatRoomMessages
@@ -53,6 +54,11 @@ namespace Infrastructure.Persistence.QueryRepositories
                 .Skip((pagination.PageNumber - 1) * pagination.PageSize) // Sonra sayfala
                 .Take(pagination.PageSize)
                 .ToListAsync(cancellationToken);
+
+            foreach (var item in items)
+            {
+                item.IsMine = (item.SenderUserId == currentUserId);
+            }
 
             return new PaginatedResponse<ChatRoomMessageDto>(items, count, pagination.PageNumber, pagination.PageSize);
         }

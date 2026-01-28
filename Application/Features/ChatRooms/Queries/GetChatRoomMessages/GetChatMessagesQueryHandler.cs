@@ -6,6 +6,8 @@ using Domain.Entities;
 using Domain.Enums;
 using Domain.Repositories;
 using MediatR;
+using Microsoft.AspNetCore.Http;
+using System.Security.Claims;
 
 namespace Application.Features.ChatRooms.Queries.GetChatRoomMessages
 {
@@ -14,20 +16,43 @@ namespace Application.Features.ChatRooms.Queries.GetChatRoomMessages
         private readonly IChatRoomRepository _chatRoomRepository;
         private readonly IChatRoomQueryRepository _queryRepository;
         private readonly IUserQueryRepository _userQueryRepository;
-        private readonly Guid _currentUserId; // TODO: Bu, HttpContext'ten gelmeli (IUserService vb.)
+        private readonly IHttpContextAccessor _httpContextAccessor;
+        private readonly Guid _currentIdentityId;
         public GetChatMessagesQueryHandler(IChatRoomRepository chatRoomRepository, 
             IChatRoomQueryRepository queryRepository, 
-            IUserQueryRepository userQueryRepository)
-            // IHttpContextAccessor'dan _currentUserId'yi de almalısınız
+            IUserQueryRepository userQueryRepository,
+            IHttpContextAccessor httpContextAccessor)
         {
             _chatRoomRepository = chatRoomRepository;
             _queryRepository = queryRepository;
             _userQueryRepository = userQueryRepository;
-            // _currentUserId = ...
+            _httpContextAccessor = httpContextAccessor;
+
+            var userIdClaim = _httpContextAccessor.HttpContext?.User?.FindFirst(ClaimTypes.NameIdentifier)?.Value
+                              ?? _httpContextAccessor.HttpContext?.User?.FindFirst("sub")?.Value;
+
+            if (!string.IsNullOrEmpty(userIdClaim) && Guid.TryParse(userIdClaim, out var userId))
+            {
+                _currentIdentityId = userId;
+            }
+            else
+            {
+                _currentIdentityId = Guid.Empty;
+            }
         }
 
         public async Task<PaginatedResponse<ChatRoomMessageDto>> Handle(GetChatMessagesQuery request, CancellationToken cancellationToken)
         {
+            if (_currentIdentityId == Guid.Empty)
+                throw new UnauthorizedAccessException("Mesajları görmek için giriş yapmalısınız.");
+
+            var currentUserDto = await _userQueryRepository.GetByIdentityIdAsync(_currentIdentityId, cancellationToken);
+
+            if (currentUserDto == null)
+                throw new UnauthorizedAccessException("Kullanıcı profili bulunamadı.");
+
+            var currentLocalUserId = currentUserDto.Id;
+
             var room = await _chatRoomRepository.GetByIdWithUsersAsync(request.RoomId, cancellationToken);
             if (room == null)
                 throw new NotFoundException(nameof(ChatRoom), request.RoomId);
@@ -36,10 +61,10 @@ namespace Application.Features.ChatRooms.Queries.GetChatRoomMessages
             if (room.RoomType == RoomType.Private)
             {
                 // Kullanıcının o anki şubesini al
-                var currentUser = await _userQueryRepository.GetByIdAsync(_currentUserId, cancellationToken);
+                var currentUser = await _userQueryRepository.GetByIdAsync(currentLocalUserId, cancellationToken);
 
                 // 1. Kullanıcı o odanın üyesi mi?
-                if (!room.ChatRoomUserMaps.Any(m => m.UserId == _currentUserId))
+                if (!room.ChatRoomUserMaps.Any(m => m.UserId == currentLocalUserId))
                     throw new Exception("Bu özel odayı görme yetkiniz yok.");
 
                 // 2. Kural: Konuşmaya devam etmek için o mekanda olunmalı
@@ -52,6 +77,7 @@ namespace Application.Features.ChatRooms.Queries.GetChatRoomMessages
                 request.RoomId,
                 room.RoomType, // 2 saatlik kural için
                 request,
+                currentLocalUserId,
                 cancellationToken
             );
         }

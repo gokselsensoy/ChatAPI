@@ -12,6 +12,7 @@ namespace Application.Abstractions.QueryRepositories
         Guid roomId,
         RoomType roomType,
         PaginatedRequest pagination,
+        Guid currentUserId,
         CancellationToken cancellationToken = default);
     }
 }
