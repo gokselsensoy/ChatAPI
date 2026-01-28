@@ -39,17 +39,15 @@ namespace WebApi.Controllers
         /// Yeni bir kullanıcı kaydı oluşturur (Identity + Lokal Profil).
         /// </summary>
         [HttpPost("/register")]
-        [ProducesResponseType(typeof(UserDto), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         public async Task<IActionResult> Register([FromBody] RegisterRequestDto request)
         {
-            // 1. Transaction'ı MANUEL olarak başlatıyoruz
-            // Çünkü hem Infrastructure (UserManager) hem de Application (Handler)
-            // aynı transaction'da çalışmalı.
+            // 1. Transaction Başlat
             await _unitOfWork.BeginTransactionAsync();
             try
             {
-                // 2. Identity (AspNetUsers) Varlığını Oluştur
+                // 2. Identity User Oluştur
                 var identityUser = new ApplicationUser
                 {
                     Email = request.Email,
@@ -60,11 +58,12 @@ namespace WebApi.Controllers
                 var identityResult = await _userManager.CreateAsync(identityUser, request.Password);
                 if (!identityResult.Succeeded)
                 {
-                    await _unitOfWork.RollbackTransactionAsync(); // Hata olursa geri al
-                    return BadRequest(identityResult.Errors);
+                    await _unitOfWork.RollbackTransactionAsync();
+                    // Hataları daha okunaklı dönelim
+                    return BadRequest(new { Errors = identityResult.Errors.Select(e => e.Description) });
                 }
 
-                // 3. Application (Lokal Profil) Varlığını Oluştur
+                // 3. Domain User (Profil) Oluştur
                 var command = new CreateUserCommand
                 {
                     IdentityId = identityUser.Id,
@@ -74,20 +73,23 @@ namespace WebApi.Controllers
                     LastName = request.LastName
                 };
 
-                // MediatR handler'ını çağır (Bu da SaveChangesAsync'i çağıracak)
                 var userId = await _sender.Send(command);
 
-                // 4. Transaction'ı Onayla
+                // 4. Her şey yolundaysa kaydet
                 await _unitOfWork.CommitTransactionAsync();
 
-                // 5. Profili DTO olarak dön (veya token bas)
-                // Şimdilik sadece OK dönelim, kullanıcı /connect/token'a gitsin
-                return Ok(new { UserId = userId, IdentityId = identityUser.Id });
+                // 5. Başarılı Dönüş
+                // Token dönmüyoruz, client'a "Git /connect/token ile giriş yap" diyoruz.
+                return Ok(new
+                {
+                    Message = "Kayıt başarılı. Giriş yapabilirsiniz.",
+                    UserId = userId
+                });
             }
             catch (Exception ex)
             {
                 await _unitOfWork.RollbackTransactionAsync();
-                return BadRequest(ex.Message);
+                return BadRequest(new { Error = "Kayıt sırasında bir hata oluştu.", Details = ex.Message });
             }
         }
 
@@ -97,156 +99,46 @@ namespace WebApi.Controllers
         /// </summary>
         #region connect/token
         [HttpPost("~/connect/token")]
-        [Consumes("application/x-www-form-urlencoded")] // Swagger'a Form tipi olduğunu söyle
+        [Consumes("application/x-www-form-urlencoded")]
         [Produces("application/json")]
         public async Task<IActionResult> Exchange([FromForm] TokenRequest request)
         {
-            // Gelen OIDC isteğini al
             var openIddictRequest = HttpContext.GetOpenIddictServerRequest();
-            if (openIddictRequest == null) throw new InvalidOperationException("İstek okunamadı.");
+            if (openIddictRequest == null) throw new InvalidOperationException("OpenID isteği okunamadı.");
 
-            // 1. SENARYO: S2S (LogisticsAPI gibi servisler için)
-            if (openIddictRequest.IsClientCredentialsGrantType())
-            {
-                // Client ID'yi al (ClientRegistrationWorker'da kaydettiğimiz)
-                var applicationId = openIddictRequest.ClientId;
-
-                // Client'ın varlığını doğrula (OpenIddict bunu zaten yapmış olabilir ama güvenli taraf)
-                var application = await _applicationManager.FindByClientIdAsync(applicationId);
-                if (application == null)
-                {
-                    return Forbid(
-                        authenticationSchemes: OpenIddictServerAspNetCoreDefaults.AuthenticationScheme,
-                        properties: new Microsoft.AspNetCore.Authentication.AuthenticationProperties(new Dictionary<string, string>
-                        {
-                            [OpenIddictServerAspNetCoreConstants.Properties.Error] = Errors.InvalidClient,
-                            [OpenIddictServerAspNetCoreConstants.Properties.ErrorDescription] = "İstemci bulunamadı."
-                        }));
-                }
-
-                // Yeni bir kimlik (ClaimsPrincipal) oluştur
-                // Bu bir "insan" değil, bir "servis" olduğu için User tablosuna bakmıyoruz.
-                var identity = new ClaimsIdentity(
-                    authenticationType: TokenValidationParameters.DefaultAuthenticationType,
-                    nameType: Claims.Name,
-                    roleType: Claims.Role);
-
-                // Kimliğe gerekli claim'leri ekle
-                identity.AddClaim(Claims.Subject, applicationId); // ID olarak ClientID kullan
-                identity.AddClaim(Claims.Name, await _applicationManager.GetDisplayNameAsync(application));
-
-                // *** KRİTİK NOKTA ***
-                // LogisticsAPI'nin [Authorize(Policy = "InternalApiAccess")] politikasını
-                // geçebilmesi için 'client_id' claim'ini ekliyoruz.
-                // OpenIddict bunu genelde otomatik yapar ama biz garantiye alalım.
-                identity.AddClaim("client_id", applicationId);
-
-                // Token'a eklenecek hakları (Scopes) belirle
-                identity.SetScopes(openIddictRequest.GetScopes());
-                identity.SetDestinations(GetDestinations);
-
-                // Token'ı üret ve dön
-                return SignIn(new ClaimsPrincipal(identity), OpenIddictServerAspNetCoreDefaults.AuthenticationScheme);
-            }
-
-            // 2. SENARYO: KULLANICI (Mobil/Web - Password Grant)
+            // 1. SENARYO: KULLANICI (Mobil/Web - Password Grant)
             if (openIddictRequest.IsPasswordGrantType())
             {
                 var user = await _userManager.FindByNameAsync(openIddictRequest.Username);
-                if (user == null)
-                {
-                    return Forbid(
-                        authenticationSchemes: OpenIddictServerAspNetCoreDefaults.AuthenticationScheme,
-                        properties: new Microsoft.AspNetCore.Authentication.AuthenticationProperties(new Dictionary<string, string>
-                        {
-                            [OpenIddictServerAspNetCoreConstants.Properties.Error] = Errors.InvalidGrant,
-                            [OpenIddictServerAspNetCoreConstants.Properties.ErrorDescription] = "Kullanıcı adı veya şifre hatalı."
-                        }));
-                }
+                if (user == null) return InvalidGrant("Kullanıcı adı veya şifre hatalı.");
 
-                // Şifreyi kontrol et
                 var result = await _signInManager.CheckPasswordSignInAsync(user, openIddictRequest.Password, lockoutOnFailure: true);
-                if (!result.Succeeded)
-                {
-                    return Forbid(
-                        authenticationSchemes: OpenIddictServerAspNetCoreDefaults.AuthenticationScheme,
-                        properties: new Microsoft.AspNetCore.Authentication.AuthenticationProperties(new Dictionary<string, string>
-                        {
-                            [OpenIddictServerAspNetCoreConstants.Properties.Error] = Errors.InvalidGrant,
-                            [OpenIddictServerAspNetCoreConstants.Properties.ErrorDescription] = "Kullanıcı adı veya şifre hatalı."
-                        }));
-                }
+                if (!result.Succeeded) return InvalidGrant("Kullanıcı adı veya şifre hatalı.");
 
-                // Email onayı kontrolü (Program.cs'te zorunlu kıldıysak)
                 if (_userManager.Options.SignIn.RequireConfirmedEmail && !await _userManager.IsEmailConfirmedAsync(user))
                 {
-                    return Forbid(
-                       authenticationSchemes: OpenIddictServerAspNetCoreDefaults.AuthenticationScheme,
-                       properties: new Microsoft.AspNetCore.Authentication.AuthenticationProperties(new Dictionary<string, string>
-                       {
-                           [OpenIddictServerAspNetCoreConstants.Properties.Error] = Errors.InvalidGrant,
-                           [OpenIddictServerAspNetCoreConstants.Properties.ErrorDescription] = "Lütfen önce email adresinizi onaylayın."
-                       }));
+                    return InvalidGrant("Lütfen önce email adresinizi onaylayın.");
                 }
 
-                // Kullanıcı için Principal oluştur
-                var principal = await _signInManager.CreateUserPrincipalAsync(user);
-
-                var identity = (ClaimsIdentity)principal.Identity;
-
-                if (!principal.HasClaim(c => c.Type == Claims.Subject))
-                {
-                    identity.AddClaim(new Claim(
-                        type: Claims.Subject,
-                        value: await _userManager.GetUserIdAsync(user)) // Kullanıcı ID'sini basıyoruz
-                    );
-                }
-
-                // Scope ve Destination ayarlarını yap
-                principal.SetScopes(openIddictRequest.GetScopes());
-                foreach (var claim in principal.Claims)
-                {
-                    claim.SetDestinations(GetDestinations(claim, principal));
-                }
+                // Yardımcı metodu çağırıyoruz (Scope'ları buradan geçiriyoruz)
+                var principal = await CreateUserPrincipalAsync(user, openIddictRequest.GetScopes());
 
                 return SignIn(principal, OpenIddictServerAspNetCoreDefaults.AuthenticationScheme);
             }
 
-            // 3. SENARYO: Refresh Token
+            // 2. SENARYO: REFRESH TOKEN
             if (openIddictRequest.IsRefreshTokenGrantType())
             {
-                // Refresh token ile gelen identity'yi al
                 var info = await HttpContext.AuthenticateAsync(OpenIddictServerAspNetCoreDefaults.AuthenticationScheme);
                 var user = await _userManager.GetUserAsync(info.Principal);
 
-                if (user == null)
+                if (user == null || !await _signInManager.CanSignInAsync(user))
                 {
-                    return Forbid(
-                       authenticationSchemes: OpenIddictServerAspNetCoreDefaults.AuthenticationScheme,
-                       properties: new Microsoft.AspNetCore.Authentication.AuthenticationProperties(new Dictionary<string, string>
-                       {
-                           [OpenIddictServerAspNetCoreConstants.Properties.Error] = Errors.InvalidGrant,
-                           [OpenIddictServerAspNetCoreConstants.Properties.ErrorDescription] = "Refresh token artık geçerli değil."
-                       }));
+                    return InvalidGrant("Refresh token artık geçerli değil.");
                 }
 
-                // Kullanıcının hala giriş yapabilir durumda olduğunu kontrol et (banlanmış mı vb.)
-                if (!await _signInManager.CanSignInAsync(user))
-                {
-                    return Forbid(
-                       authenticationSchemes: OpenIddictServerAspNetCoreDefaults.AuthenticationScheme,
-                       properties: new Microsoft.AspNetCore.Authentication.AuthenticationProperties(new Dictionary<string, string>
-                       {
-                           [OpenIddictServerAspNetCoreConstants.Properties.Error] = Errors.InvalidGrant,
-                           [OpenIddictServerAspNetCoreConstants.Properties.ErrorDescription] = "Kullanıcı artık giriş yapamaz."
-                       }));
-                }
-
-                var principal = await _signInManager.CreateUserPrincipalAsync(user);
-                foreach (var claim in principal.Claims)
-                {
-                    claim.SetDestinations(GetDestinations(claim, principal));
-                }
+                // Refresh token'dan gelen scope'ları koruyarak yeni token üret
+                var principal = await CreateUserPrincipalAsync(user, info.Principal.GetScopes());
 
                 return SignIn(principal, OpenIddictServerAspNetCoreDefaults.AuthenticationScheme);
             }
@@ -254,30 +146,61 @@ namespace WebApi.Controllers
             throw new NotImplementedException("Bu grant type henüz desteklenmiyor.");
         }
 
-        // Yardımcı Metot: Claim'lerin Access Token'a mı yoksa Identity Token'a mı gideceğini belirler
-        private static IEnumerable<string> GetDestinations(Claim claim)
+        // --- YARDIMCI METOTLAR (Token Oluşturma Mantığı Burada Toplandı) ---
+
+        private async Task<ClaimsPrincipal> CreateUserPrincipalAsync(ApplicationUser user, IEnumerable<string> scopes)
         {
-            // Servisler arası iletişimde genellikle sadece Access Token yeterlidir.
-            yield return Destinations.AccessToken;
+            var principal = await _signInManager.CreateUserPrincipalAsync(user);
+            var identity = (ClaimsIdentity)principal.Identity;
+
+            // *** DÜZELTME BAŞLANGICI ***
+            // Sorunun Çözümü: OpenIddict "sub" claim'ini zorunlu tutar.
+            // Eğer Identity bu claim'i oluşturmadıysa (ki varsayılan olarak oluşturmaz), biz ekliyoruz.
+            if (!principal.HasClaim(c => c.Type == OpenIddictConstants.Claims.Subject))
+            {
+                var userId = await _userManager.GetUserIdAsync(user);
+                identity.AddClaim(new Claim(OpenIddictConstants.Claims.Subject, userId));
+            }
+            // *** DÜZELTME BİTİŞİ ***
+
+            // Client'tan gelen scope'ları (örn: offline_access) token'a işle
+            principal.SetScopes(scopes);
+
+            // Her claim'in nereye gideceğini (Access Token mı Identity Token mı) belirle
+            foreach (var claim in principal.Claims)
+            {
+                claim.SetDestinations(GetDestinations(claim));
+            }
+
+            return principal;
         }
 
-        // Helper Metot 2: Kullanıcı (Password/Refresh Grant) için detaylı versiyon
-        private static IEnumerable<string> GetDestinations(Claim claim, ClaimsPrincipal principal)
+        private static IEnumerable<string> GetDestinations(Claim claim)
         {
-            // 1. Kural: Her claim MUTLAKA Access Token'a gitmeli (API'nin yetki kontrolü için)
+            // Tüm claimler Access Token'a gitsin (API yetki kontrolü için)
             yield return Destinations.AccessToken;
 
-            // 2. Kural: Kimlik bilgileri Identity Token'a da gitmeli (Frontend'in kullanıcıyı tanıması için)
+            // Bazı önemli claimler Identity Token'a da gitsin (Frontend profili görsün diye)
             switch (claim.Type)
             {
-                case Claims.Name:       // "name"
-                case Claims.Email:      // "email"
-                case Claims.Subject:    // "sub" (Hata almamak için bu şart!)
-                case Claims.Role:       // "role"
-                case "client_id":                           // Özel claimlerimiz
+                case Claims.Name:
+                case Claims.Email:
+                case Claims.Subject: // User ID
+                case Claims.Role:
                     yield return Destinations.IdentityToken;
                     yield break;
             }
+        }
+
+        private IActionResult InvalidGrant(string message)
+        {
+            return Forbid(
+                authenticationSchemes: OpenIddictServerAspNetCoreDefaults.AuthenticationScheme,
+                properties: new AuthenticationProperties(new Dictionary<string, string>
+                {
+                    [OpenIddictServerAspNetCoreConstants.Properties.Error] = Errors.InvalidGrant,
+                    [OpenIddictServerAspNetCoreConstants.Properties.ErrorDescription] = message
+                }));
         }
         #endregion
         //[HttpPost("~/connect/token")]
@@ -333,6 +256,9 @@ namespace WebApi.Controllers
 
             [FromForm(Name = "refresh_token")]
             public string? RefreshToken { get; set; }
+
+            [FromForm(Name = "scope")]
+            public string? Scope { get; set; } // "offline_access"
         }
 
         public class RegisterRequestDto

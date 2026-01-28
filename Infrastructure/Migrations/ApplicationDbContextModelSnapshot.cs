@@ -66,7 +66,7 @@ namespace Infrastructure.Migrations
 
                     b.HasIndex("BranchId");
 
-                    b.ToTable("Announcements");
+                    b.ToTable("Announcements", (string)null);
                 });
 
             modelBuilder.Entity("Domain.Entities.Blacklist", b =>
@@ -106,7 +106,7 @@ namespace Infrastructure.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("Blacklist");
+                    b.ToTable("Blacklist", (string)null);
                 });
 
             modelBuilder.Entity("Domain.Entities.Branch", b =>
@@ -382,7 +382,7 @@ namespace Infrastructure.Migrations
 
                     b.HasIndex("BranchId");
 
-                    b.ToTable("Menus");
+                    b.ToTable("Menus", (string)null);
                 });
 
             modelBuilder.Entity("Domain.Entities.MenuItem", b =>
@@ -427,7 +427,7 @@ namespace Infrastructure.Migrations
 
                     b.HasIndex("MenuId");
 
-                    b.ToTable("MenuItems");
+                    b.ToTable("MenuItems", (string)null);
                 });
 
             modelBuilder.Entity("Domain.Entities.User", b =>
@@ -983,7 +983,7 @@ namespace Infrastructure.Migrations
 
                             b1.HasKey("BranchId");
 
-                            b1.ToTable("Branches");
+                            b1.ToTable("Branches", (string)null);
 
                             b1.WithOwner()
                                 .HasForeignKey("BranchId");

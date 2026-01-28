@@ -1,6 +1,8 @@
 ﻿using Application.Abstractions.QueryRepositories;
+using Application.Abstractions.Services;
 using Domain.Repositories;
 using Domain.SeedWork;
+using Infrastructure.Identity.Services;
 using Infrastructure.Persistence.Context;
 using Infrastructure.Persistence.QueryRepositories;
 using Infrastructure.Persistence.Repositories;
@@ -35,6 +37,7 @@ namespace Infrastructure.DependencyInjection
                 sp.GetRequiredService<ApplicationDbContext>());
 
             services.AddScoped(typeof(IRepository<>), typeof(BaseRepository<>));
+            services.AddScoped<IIdentityService, IdentityService>();
 
             services.AddScoped<IBrandRepository, BrandRepository>();
             services.AddScoped<IBrandQueryRepository, BrandQueryRepository>();
