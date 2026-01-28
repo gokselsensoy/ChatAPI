@@ -8,6 +8,9 @@ namespace Infrastructure.Persistence.Configurations
     {
         public void Configure(EntityTypeBuilder<ChatRoomMessage> builder)
         {
+            builder.Property(x => x.Id)
+                .ValueGeneratedNever();
+
             builder.ToTable("ChatRoomMessages");
             builder.HasKey(m => m.Id);
             builder.Property(m => m.Message).IsRequired();
