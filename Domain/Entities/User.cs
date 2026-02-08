@@ -13,10 +13,7 @@ namespace Domain.Entities
         public string LastName { get; private set; }
         public UserType UserType { get; private set; }
         public string? FileId { get; private set; }
-        public Guid? BranchId { get; private set; }
 
-        // Navigations
-        public Branch? Branch { get; private set; }
         public ICollection<ChatRoomMessage> SentMessages { get; private set; } = new List<ChatRoomMessage>();
         public ICollection<ChatRoomUserMap> ChatRoomMaps { get; private set; } = new List<ChatRoomUserMap>();
         public ICollection<ChatRoomInvite> SentInvites { get; private set; } = new List<ChatRoomInvite>();
@@ -41,8 +38,6 @@ namespace Domain.Entities
                 UserName = userName,
                 FirstName = firstName,
                 LastName = lastName,
-                UserType = userType,
-                BranchId = null
             };
 
             user.AddDomainEvent(new UserCreatedDomainEvent(user.Id, user.IdentityId, user.UserName));
@@ -58,17 +53,6 @@ namespace Domain.Entities
             FileId = fileId;
 
             AddDomainEvent(new UserProfileUpdatedDomainEvent(Id, IdentityId, userName));
-        }
-
-        public void CheckInToBranch(Guid? newBranchId)
-        {
-            if (BranchId == newBranchId)
-                return;
-
-            var oldBranchId = BranchId;
-            BranchId = newBranchId;
-
-            AddDomainEvent(new UserCheckedInToBranchDomainEvent(Id, IdentityId, newBranchId, oldBranchId));
         }
     }
 }

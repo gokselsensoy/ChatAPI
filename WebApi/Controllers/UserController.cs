@@ -1,10 +1,10 @@
 ﻿using Application.Exceptions;
-using Application.Features.Users.Commands.SetUserCurrentBranch;
+using Application.Features.Users.Commands.CheckIn;
+using Application.Features.Users.Commands.CheckOut;
+using Application.Features.Users.Commands.CheckOutControl;
 using Application.Features.Users.Commands.UpdateMyProfile;
 using Application.Features.Users.DTOs;
-using Application.Features.Users.Queries;
 using Application.Features.Users.Queries.GetMyProfile;
-using Domain.Entities;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -68,24 +68,74 @@ namespace WebApi.Controllers
         }
 
         /// <summary>
-        /// Giriş yapan kullanıcının bir şubeye check-in yapmasını (veya ayrılmasını) sağlar.
+        /// Kullanıcı bir şubeye giriş yapar (Check-In).
         /// </summary>
-        [HttpPut("me/check-in")]
-        [ProducesResponseType(StatusCodes.Status204NoContent)]
-        public async Task<IActionResult> CheckInToBranch([FromBody] SetUserBranchRequest request)
+        [HttpPost("check-in")]
+        public async Task<IActionResult> CheckIn([FromBody] CheckInCommand command)
         {
-            var (userId, _) = await GetUserIdsFromToken();
-            if (userId == Guid.Empty)
-                return Unauthorized("Geçersiz token veya profil bulunamadı.");
+            command.UserId = GetCurrentUserId();
+            await _sender.Send(command);
+            return Ok(new { Message = "Check-in başarılı." });
+        }
 
-            var command = new SetUserCurrentBranchCommand
+        /// <summary>
+        /// Kullanıcı mekandan manuel olarak ayrılır (Check-Out).
+        /// </summary>
+        [HttpPost("check-out")]
+        public async Task<IActionResult> CheckOut()
+        {
+            // Body'den veri almaya gerek yok, sadece tetiklemek yeterli.
+            var command = new CheckOutCommand
             {
-                UserId = userId, // Sadece lokal ID'ye ihtiyacımız var
-                NewBranchId = request.BranchId
+                UserId = GetCurrentUserId()
             };
 
             await _sender.Send(command);
-            return NoContent();
+            return Ok(new { Message = "Çıkış işlemi başarılı." });
+        }
+
+        /// <summary>
+        /// Mobil uygulama arka planda bu endpoint'i çağırır.
+        /// Eğer kullanıcı 100m uzaklaşmışsa otomatik check-out yapılır.
+        /// </summary>
+        [HttpPost("check-out-control")]
+        public async Task<IActionResult> CheckOutControl([FromBody] HeartbeatRequest request)
+        {
+            var command = new CheckOutControlCommand
+            {
+                UserId = GetCurrentUserId(),
+                Latitude = request.Latitude,
+                Longitude = request.Longitude
+            };
+
+            bool isCheckedOut = await _sender.Send(command);
+
+            if (isCheckedOut)
+            {
+                return Ok(new { Status = "CheckedOut", Message = "Mekandan uzaklaştığınız için çıkış yapıldı." });
+            }
+
+            return Ok(new { Status = "Active", Message = "Konum güncellendi, hala mekandasınız." });
+        }
+
+        // --- Yardımcı Metot: Token'dan User ID Okuma ---
+        private Guid GetCurrentUserId()
+        {
+            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value
+                           ?? User.FindFirst("sub")?.Value;
+
+            if (string.IsNullOrEmpty(userIdClaim) || !Guid.TryParse(userIdClaim, out var userId))
+            {
+                throw new UnauthorizedAccessException("Geçersiz token. Kullanıcı ID bulunamadı.");
+            }
+
+            return userId;
+        }
+
+        public class HeartbeatRequest
+        {
+            public decimal Latitude { get; set; }
+            public decimal Longitude { get; set; }
         }
 
         #region Helper Methods
@@ -106,21 +156,6 @@ namespace WebApi.Controllers
             {
                 return (Guid.Empty, Guid.Empty);
             }
-        }
-        #endregion
-
-        #region Models
-        public class UpdateMyProfileRequest
-        {
-            public string UserName { get; set; }
-            public string FirstName { get; set; }
-            public string LastName { get; set; }
-            public string? FileId { get; set; }
-        }
-
-        public class SetUserBranchRequest
-        {
-            public Guid? BranchId { get; set; }
         }
         #endregion
     }

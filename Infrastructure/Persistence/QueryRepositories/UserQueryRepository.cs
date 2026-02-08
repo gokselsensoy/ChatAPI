@@ -59,10 +59,24 @@ namespace Infrastructure.Persistence.QueryRepositories
 
         public async Task<Dictionary<Guid, Guid?>> GetUserBranchMapAsync(IEnumerable<Guid> userIds, CancellationToken cancellationToken = default)
         {
-            return await _context.Users
+            // 1. Önce bu kullanıcıların UserLocation tablosundaki kayıtlarını çekelim
+            var locations = await _context.UserLocations
                 .AsNoTracking()
-                .Where(u => userIds.Contains(u.Id))
-                .ToDictionaryAsync(u => u.Id, u => u.BranchId, cancellationToken);
+                .Where(ul => userIds.Contains(ul.UserId))
+                .Select(ul => new { ul.UserId, ul.BranchId }) // Sadece ihtiyacımız olan alanlar
+                .ToListAsync(cancellationToken);
+
+            // 2. Dictionary'yi oluştur. 
+            // DİKKAT: Listede olmayan (hiç check-in yapmamış) kullanıcılar için 'null' dönmeliyiz.
+            var result = new Dictionary<Guid, Guid?>();
+
+            foreach (var userId in userIds)
+            {
+                var loc = locations.FirstOrDefault(x => x.UserId == userId);
+                result[userId] = loc?.BranchId; // Kayıt varsa BranchId, yoksa null
+            }
+
+            return result;
         }
     }
 }

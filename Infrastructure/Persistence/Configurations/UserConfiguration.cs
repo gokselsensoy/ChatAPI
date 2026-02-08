@@ -20,12 +20,6 @@ namespace Infrastructure.Persistence.Configurations
             // 1-1 İlişki: Bizim User'ımız, AspNetUsers'taki 1 kayda bağlıdır.
             // Bu, EF Core'un bilmesi için GEREKLİ DEĞİLDİR (çünkü navigasyon eklemiyoruz),
             // ancak IdentityId'nin FK olduğunu bilmek önemlidir.
-
-            // 1-N İlişki: User (1) -> Branch (N)
-            builder.HasOne(u => u.Branch)
-                .WithMany(b => b.Users)
-                .HasForeignKey(u => u.BranchId)
-                .OnDelete(DeleteBehavior.SetNull); // Şube silinirse User'ın BranchId'si null olsun
         }
     }
 }

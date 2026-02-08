@@ -41,11 +41,6 @@ namespace Infrastructure.Persistence.Configurations
             builder.HasMany(b => b.ChatRooms)
                 .WithOne(c => c.Branch)
                 .HasForeignKey(c => c.BranchId);
-
-            builder.HasMany(b => b.Users)
-                .WithOne(u => u.Branch)
-                .HasForeignKey(u => u.BranchId)
-                .OnDelete(DeleteBehavior.SetNull);
         }
     }
 }

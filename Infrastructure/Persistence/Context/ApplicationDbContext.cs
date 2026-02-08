@@ -83,6 +83,8 @@ namespace Infrastructure.Persistence.Context
         public DbSet<Brand> Brands { get; set; }
         public DbSet<Branch> Branches { get; set; }
         public DbSet<User> Users { get; set; }
+        public DbSet<UserLocation> UserLocations { get; set; }
+        public DbSet<CheckInHistory> CheckInHistories { get; set; }
         public DbSet<ChatRoom> ChatRooms { get; set; }
         public DbSet<ChatRoomInvite> ChatRoomInvites { get; set; }
         public DbSet<ChatRoomMessage> ChatRoomMessages { get; set; }
