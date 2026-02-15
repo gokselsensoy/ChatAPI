@@ -6,9 +6,9 @@ namespace WebApi.Services
 {
     public class SignalRNotificationService : INotificationService
     {
-        private readonly IHubContext<NotificationHub> _hubContext;
+        private readonly IHubContext<ChatHub> _hubContext;
 
-        public SignalRNotificationService(IHubContext<NotificationHub> hubContext)
+        public SignalRNotificationService(IHubContext<ChatHub> hubContext)
         {
             _hubContext = hubContext;
         }

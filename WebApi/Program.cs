@@ -218,15 +218,37 @@ try
         c.RoutePrefix = string.Empty; // Swagger'ı ana sayfada (root) açar
     });
 
+    app.UseMiddleware<GlobalExceptionHandlingMiddleware>();
+
+    // 2. Loglamayı hemen başlat (Kimlik doğrulamadan red yiyenleri de görmek için)
+    app.UseSerilogRequestLogging();
+
     app.UseHttpsRedirection();
     app.UseRouting();
     app.UseCors("AllowSpecificOrigins");
-    app.UseMiddleware<GlobalExceptionHandlingMiddleware>();
+
+    // 3. SENİN TOKEN MIDDLEWARE'İN (Yeri Burası Doğru)
+    app.Use(async (context, next) =>
+    {
+        var accessToken = context.Request.Query["access_token"];
+        var path = context.Request.Path;
+        if (!string.IsNullOrEmpty(accessToken) && path.StartsWithSegments("/chathub"))
+        {
+            if (!context.Request.Headers.ContainsKey("Authorization"))
+            {
+                context.Request.Headers.Append("Authorization", "Bearer " + accessToken);
+            }
+        }
+        await next();
+    });
+
+    // 4. Auth İşlemleri
     app.UseAuthentication();
     app.UseAuthorization();
-    app.UseSerilogRequestLogging();
+
+    // 5. Endpointler
     app.MapControllers();
-    app.MapHub<NotificationHub>("/notification-hub");
+    app.MapHub<ChatHub>("/chathub");
     // Hangfire Dashboard'u /hangfire adresinde aktif et
     // TODO: Production'da buraya bir yetkilendirme filtresi eklenmelidir!
     // Örn: app.MapHangfireDashboard("/hangfire", new DashboardOptions

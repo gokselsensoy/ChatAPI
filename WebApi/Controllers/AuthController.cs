@@ -1,6 +1,7 @@
 ﻿using Application.Features.Users.Commands;
 using Application.Features.Users.Commands.CreateUser;
 using Application.Features.Users.DTOs;
+using Domain.Enums;
 using Domain.SeedWork;
 using Infrastructure.Identity.Models;
 using MediatR;
@@ -70,7 +71,8 @@ namespace WebApi.Controllers
                     UserName = identityUser.UserName,
                     Email = identityUser.Email,
                     FirstName = request.FirstName,
-                    LastName = request.LastName
+                    LastName = request.LastName,
+                    UserType = request.UserType
                 };
 
                 var userId = await _sender.Send(command);
@@ -268,6 +270,7 @@ namespace WebApi.Controllers
             public string UserName { get; set; }
             public string FirstName { get; set; }
             public string LastName { get; set; }
+            public UserType UserType { get; set; }
         }
     }
 }

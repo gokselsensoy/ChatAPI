@@ -38,6 +38,7 @@ namespace Domain.Entities
                 UserName = userName,
                 FirstName = firstName,
                 LastName = lastName,
+                UserType = userType
             };
 
             user.AddDomainEvent(new UserCreatedDomainEvent(user.Id, user.IdentityId, user.UserName));

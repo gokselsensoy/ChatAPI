@@ -1,9 +1,10 @@
 ﻿using Application.Abstractions.Messaging;
 using Application.Features.Branchs.DTOs;
+using Application.Shared.Pagination;
 
 namespace Application.Features.Branchs.Queries.GetNearbyBranches
 {
-    public class GetNearbyBranchesQuery : ICachableQuery<List<NearbyBranchDto>>
+    public class GetNearbyBranchesQuery : PaginatedRequest, ICachableQuery<PaginatedResponse<NearbyBranchDto>>
     {
         public decimal Latitude { get; set; }
         public decimal Longitude { get; set; }

@@ -12,10 +12,11 @@ namespace Application.Abstractions.QueryRepositories
             PaginatedRequest pagination,
             CancellationToken cancellationToken = default);
 
-        Task<List<NearbyBranchDto>> GetNearbyBranchesAsync(
+        Task<PaginatedResponse<NearbyBranchDto>> GetNearbyBranchesAsync(
             decimal latitude,
             decimal longitude,
             int distanceInMeters,
+            PaginatedRequest pagination, // Pagination parametresi
             CancellationToken cancellationToken = default);
     }
 }
