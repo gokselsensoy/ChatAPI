@@ -16,5 +16,28 @@ namespace Domain.Entities
         public Menu? Menu { get; private set; }
 
         private MenuItem() { }
+
+        internal static MenuItem Create(Guid menuId, string name, string description, CategoryType categoryType, decimal price, string? fileId)
+        {
+            return new MenuItem
+            {
+                Id = Guid.NewGuid(),
+                MenuId = menuId,
+                Name = name,
+                Description = description,
+                CategoryType = categoryType,
+                Price = price,
+                FileId = fileId
+            };
+        }
+
+        internal void Update(string name, string description, CategoryType categoryType, decimal price, string? fileId)
+        {
+            Name = name;
+            Description = description;
+            CategoryType = categoryType;
+            Price = price;
+            FileId = fileId;
+        }
     }
 }
