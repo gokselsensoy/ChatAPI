@@ -7,5 +7,6 @@ namespace Domain.Repositories
     {
         Task<ChatRoom?> GetByIdWithUsersAsync(Guid id, CancellationToken cancellationToken = default);
         Task<ChatRoom?> GetByIdWithMessagesAndUsersAsync(Guid id, CancellationToken cancellationToken = default);
+        Task<List<ChatRoom>> GetRoomsByUserAndBranchAsync(Guid userId, Guid branchId, CancellationToken cancellationToken = default);
     }
 }

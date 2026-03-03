@@ -24,5 +24,16 @@ namespace Infrastructure.Persistence.Repositories
                 .Include(cr => cr.Messages) // Gerekli
                 .FirstOrDefaultAsync(cr => cr.Id == id, cancellationToken);
         }
+
+        public async Task<List<ChatRoom>> GetRoomsByUserAndBranchAsync(Guid userId, Guid branchId, CancellationToken cancellationToken = default)
+        {
+            return await _context.ChatRooms
+                .Include(r => r.ChatRoomUserMaps) // Kullanıcı listesini dahil et ki silebilelim
+                .Where(r =>
+                    r.BranchId == branchId &&
+                    r.IsDeleted == false && // Silinmemiş odalar
+                    r.ChatRoomUserMaps.Any(m => m.UserId == userId)) // Kullanıcının içinde olduğu odalar
+                .ToListAsync(cancellationToken);
+        }
     }
 }

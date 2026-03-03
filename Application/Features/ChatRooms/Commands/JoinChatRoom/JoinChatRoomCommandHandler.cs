@@ -15,17 +15,20 @@ namespace Application.Features.ChatRooms.Commands.JoinChatRoom
         private readonly IUnitOfWork _unitOfWork;
         private readonly IUserQueryRepository _userQueryRepository; // Kullanıcı bilgisi için
         private readonly INotificationService _notificationService; // SignalR için
+        private readonly IBlacklistQueryRepository _blacklistQueryRepository;
 
         public JoinChatRoomCommandHandler(
             IChatRoomRepository chatRoomRepository, // DEĞİŞTİ
             IUnitOfWork unitOfWork,
             IUserQueryRepository userQueryRepository, // EKLENDİ
-            INotificationService notificationService)
+            INotificationService notificationService,
+            IBlacklistQueryRepository blacklistQueryRepository)
         {
             _chatRoomRepository = chatRoomRepository;
             _unitOfWork = unitOfWork;
             _userQueryRepository = userQueryRepository; // EKLENDİ
             _notificationService = notificationService;
+            _blacklistQueryRepository = blacklistQueryRepository;
         }
 
         public async Task Handle(JoinChatRoomCommand request, CancellationToken cancellationToken)
@@ -33,6 +36,10 @@ namespace Application.Features.ChatRooms.Commands.JoinChatRoom
             var room = await _chatRoomRepository.GetByIdWithUsersAsync(request.RoomId, cancellationToken);
             if (room == null)
                 throw new NotFoundException(nameof(ChatRoom), request.RoomId);
+
+            bool isBanned = await _blacklistQueryRepository.IsUserBannedAsync(request.UserId, room.BranchId, cancellationToken);
+            if (isBanned)
+                throw new UnauthorizedAccessException("Bu şubedeki sohbetlere katılmanız engellenmiştir.");
 
             // 1. İşlemi Yap
             room.AddUser(request.UserId, room.RoomType, request.UserCurrentBranchId);

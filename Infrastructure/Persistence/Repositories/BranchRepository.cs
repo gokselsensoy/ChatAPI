@@ -1,4 +1,5 @@
-﻿using Domain.Entities;
+﻿using Application.Abstractions.QueryRepositories;
+using Domain.Entities;
 using Domain.Repositories;
 using Infrastructure.Persistence.Context;
 

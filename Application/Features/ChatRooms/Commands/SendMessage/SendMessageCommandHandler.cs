@@ -16,17 +16,20 @@ namespace Application.Features.ChatRooms.Commands.SendMessage
         private readonly IChatRoomRepository _chatRoomRepository; // DEĞİŞTİ
         private readonly INotificationService _notificationService;
         private readonly IUserQueryRepository _userQueryRepository; // YENİ (Geo-Lock için)
+        private readonly IBlacklistQueryRepository _blacklistQueryRepository;
 
         public SendMessageCommandHandler(
             IUnitOfWork unitOfWork,
             IChatRoomRepository chatRoomRepository,
             INotificationService notificationService,
-            IUserQueryRepository userQueryRepository) // YENİ
+            IUserQueryRepository userQueryRepository,
+            IBlacklistQueryRepository blacklistQueryRepository) // YENİ
         {
             _unitOfWork = unitOfWork;
             _chatRoomRepository = chatRoomRepository;
             _notificationService = notificationService;
             _userQueryRepository = userQueryRepository; // YENİ
+            _blacklistQueryRepository = blacklistQueryRepository;
         }
 
         public async Task<ChatRoomMessageDto> Handle(SendMessageCommand request, CancellationToken cancellationToken)
@@ -36,6 +39,10 @@ namespace Application.Features.ChatRooms.Commands.SendMessage
             var room = await _chatRoomRepository.GetByIdWithUsersAsync(request.RoomId, cancellationToken);
             if (room == null)
                 throw new NotFoundException(nameof(ChatRoom), request.RoomId);
+
+            bool isBanned = await _blacklistQueryRepository.IsUserBannedAsync(request.SenderUserId, room.BranchId, cancellationToken);
+            if (isBanned)
+                throw new UnauthorizedAccessException("Bu şubede mesaj göndermeniz engellenmiştir.");
 
             // 2. KURAL 2 (GEO-LOCK)
             if (room.RoomType == RoomType.Private || room.RoomType == RoomType.Group)
