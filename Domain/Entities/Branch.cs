@@ -14,6 +14,9 @@ namespace Domain.Entities
         public BranchType BranchType { get; private set; }
         public Guid BrandId { get; private set; }
 
+        private readonly List<Tag> _tags = new(); // <--- DİKKAT: Tag olmalı
+        public IReadOnlyCollection<Tag> Tags => _tags.AsReadOnly();
+
         // Navigations
         public Brand? Brand { get; private set; }
         public ICollection<ChatRoom> ChatRooms { get; private set; } = new List<ChatRoom>();
@@ -29,7 +32,8 @@ namespace Domain.Entities
             Guid brandId,
             Address address, // Adres VO'su dışarıda oluşturulup buraya verilir
             BranchType branchType,
-            string? fileId = null)
+            string? fileId = null,
+            IEnumerable<string>? tags = null)
         {
             if (string.IsNullOrWhiteSpace(name))
                 throw new BranchDomainException("Şube adı (Name) boş olamaz.");
@@ -54,6 +58,19 @@ namespace Domain.Entities
                 FileId = fileId
             };
 
+            if (tags != null && tags.Any())
+            {
+                // 1. Önce stringleri temizle (boş olanları at)
+                // 2. Tag Value Object'ine çevir
+                // 3. Tekrarları engelle (Distinct - Tag objesinin Equals metodu sayesinde çalışır)
+                var tagObjects = tags
+                    .Where(t => !string.IsNullOrWhiteSpace(t))
+                    .Select(t => Tag.Create(t))
+                    .Distinct();
+
+                branch._tags.AddRange(tagObjects);
+            }
+
             branch.AddDomainEvent(new BranchCreatedDomainEvent(branch.Id, branch.BrandId, branch.Name));
 
             return branch;
@@ -64,7 +81,8 @@ namespace Domain.Entities
             Guid brandId,
             Address address,
             BranchType branchType,
-            string? fileId)
+            string? fileId,
+            IEnumerable<string>? tags = null)
         {
             // Validationlar
             if (string.IsNullOrWhiteSpace(name))
@@ -84,6 +102,20 @@ namespace Domain.Entities
             Address = address;
             BranchType = branchType;
             FileId = fileId;
+
+            _tags.Clear();
+            if (tags != null && tags.Any())
+            {
+                // 1. Önce stringleri temizle (boş olanları at)
+                // 2. Tag Value Object'ine çevir
+                // 3. Tekrarları engelle (Distinct - Tag objesinin Equals metodu sayesinde çalışır)
+                var tagObjects = tags
+                    .Where(t => !string.IsNullOrWhiteSpace(t))
+                    .Select(t => Tag.Create(t))
+                    .Distinct();
+
+                _tags.AddRange(tagObjects);
+            }
 
             // Event fırlat
             AddDomainEvent(new BranchUpdatedDomainEvent(Id, BrandId, Name));

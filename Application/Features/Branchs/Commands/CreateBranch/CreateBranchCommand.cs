@@ -24,5 +24,6 @@ namespace Application.Features.Branchs.Commands.CreateBranch
         public string ZipCode { get; set; }
         public decimal Latitude { get; set; }
         public decimal Longitude { get; set; }
+        public List<string>? Tags { get; set; }
     }
 }

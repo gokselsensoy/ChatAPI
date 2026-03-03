@@ -1,5 +1,7 @@
 ﻿using Domain.Entities;
+using Domain.ValueObjects;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.ChangeTracking;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace Infrastructure.Persistence.Configurations
@@ -32,6 +34,27 @@ namespace Infrastructure.Persistence.Configurations
                         .HasColumnName("Address_Location")
                         .HasColumnType("geometry(Point)");
             });
+
+            builder.Property(b => b.Tags)
+                .HasConversion(
+                    // 1. C# objesinden DB'ye yazarken: Tag nesnelerinin içindeki Value'leri al, string listesi yap, onu JSON'a çevir
+                    v => System.Text.Json.JsonSerializer.Serialize(v.Select(t => t.Value), (System.Text.Json.JsonSerializerOptions)null),
+
+                    // 2. DB'den C# objesine okurken: JSON'ı string listesine çevir, sonra her stringi Tag.Create ile Tag nesnesine çevir
+                    v => (System.Text.Json.JsonSerializer.Deserialize<List<string>>(v, (System.Text.Json.JsonSerializerOptions)null) ?? new List<string>())
+                         .Select(s => Tag.Create(s)).ToList()
+                )
+                .Metadata.SetValueComparer(
+                    // 3. Comparer içinde artık string değil 'Tag' olmalı!
+                    new ValueComparer<IReadOnlyCollection<Tag>>(
+                        (c1, c2) => c1.SequenceEqual(c2),
+                        c => c.Aggregate(0, (a, v) => HashCode.Combine(a, v.GetHashCode())),
+                        c => c.ToList().AsReadOnly()
+                    )
+                );
+
+            builder.Metadata.FindNavigation(nameof(Branch.Tags))
+                ?.SetPropertyAccessMode(PropertyAccessMode.Field);
 
             builder.HasOne(b => b.Brand)
                 .WithMany(br => br.Branches)

@@ -20,8 +20,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Folder Include="Features\Blacklists\DTOs\" />
-    <Folder Include="Features\Blacklists\Queries\" />
     <Folder Include="Features\ChatRooms\EventHandlers\" />
   </ItemGroup>
 

@@ -12,6 +12,9 @@ namespace Domain.SeedWork
         Task<T?> GetAsync(Expression<Func<T, bool>> predicate, CancellationToken cancellationToken = default);
         Task<T?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default);
         Task<List<T>> GetAllAsync(CancellationToken cancellationToken = default);
+        Task<List<T>> GetAllListAsync(
+        Expression<Func<T, bool>>? predicate = null,
+        CancellationToken cancellationToken = default);
 
         void Add(T entity);
         void Update(T entity);

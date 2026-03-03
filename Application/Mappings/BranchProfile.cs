@@ -18,7 +18,9 @@ namespace Application.Mappings
                 .ForMember(dest => dest.ApartmentNumber, opt => opt.MapFrom(src => src.Address.ApartmentNumber))
                 .ForMember(dest => dest.ZipCode, opt => opt.MapFrom(src => src.Address.ZipCode))
                 .ForMember(dest => dest.Latitude, opt => opt.MapFrom(src => (decimal)src.Address.Location.Y))
-                .ForMember(dest => dest.Longitude, opt => opt.MapFrom(src => (decimal)src.Address.Location.X));
+                .ForMember(dest => dest.Longitude, opt => opt.MapFrom(src => (decimal)src.Address.Location.X))
+                .ForMember(dest => dest.Tags, opt => opt.MapFrom(src =>
+                src.Tags.Select(t => t.Value).ToList()));
 
             CreateMap<Branch, NearbyBranchDto>()
                 .ForMember(dest => dest.Country, opt => opt.MapFrom(src => src.Address.Country))
@@ -31,14 +33,12 @@ namespace Application.Mappings
                 .ForMember(dest => dest.ZipCode, opt => opt.MapFrom(src => src.Address.ZipCode))
                 .ForMember(dest => dest.Latitude, opt => opt.MapFrom(src => (decimal)src.Address.Location.Y))
                 .ForMember(dest => dest.Longitude, opt => opt.MapFrom(src => (decimal)src.Address.Location.X))
-
-                // Şimdilik Default False Dönecek Alanlar
+                .ForMember(dest => dest.Tags, opt => opt.MapFrom(src => src.Tags.Select(t => t.Value).ToList()))
                 .ForMember(dest => dest.ActivePool, opt => opt.MapFrom(src => false))
                 .ForMember(dest => dest.ActiveEvent, opt => opt.MapFrom(src => false))
                 .ForMember(dest => dest.FullnessLevel, opt => opt.Ignore())
                 .ForMember(dest => dest.FullnessLabel, opt => opt.Ignore())
-                .ForMember(dest => dest.DistanceInMeters, opt => opt.Ignore())
-                .ForMember(dest => dest.Tags, opt => opt.Ignore());
+                .ForMember(dest => dest.DistanceInMeters, opt => opt.Ignore());
         }
     }
 }

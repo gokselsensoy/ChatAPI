@@ -41,7 +41,8 @@ namespace Application.Features.Branchs.Commands.UpdateBranch
                 request.BrandId,
                 address,
                 request.BranchType,
-                request.FileId
+                request.FileId,
+                request.Tags
             );
 
             // 4. Kaydet

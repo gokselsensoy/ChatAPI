@@ -92,28 +92,6 @@ namespace Infrastructure.Persistence.QueryRepositories
                 .ProjectTo<NearbyBranchDto>(_mapper.ConfigurationProvider)
                 .ToListAsync(cancellationToken);
 
-            // 6. Hafızada (In-Memory) Hesaplamalar ve Mock Data
-            foreach (var branch in items)
-            {
-                // Mesafe Hesabı
-                var branchLocation = new Point((double)branch.Longitude, (double)branch.Latitude) { SRID = 4326 };
-                branch.DistanceInMeters = branchLocation.Distance(userLocation) * 111195;
-
-                // Mock Fullness (Her şube için rastgele olsun diye döngü içine aldım)
-                int fullness = random.Next(1, 10) * 10;
-                branch.FullnessLevel = fullness;
-
-                if (fullness <= 30) branch.FullnessLabel = "Sakin";
-                else if (fullness <= 70) branch.FullnessLabel = "Hareketli";
-                else branch.FullnessLabel = "Çok Yoğun";
-
-                // Mock Tags
-                branch.Tags = availableTags
-                    .OrderBy(x => random.Next())
-                    .Take(random.Next(2, 4))
-                    .ToList();
-            }
-
             // 7. Paginated Response Döndür
             return new PaginatedResponse<NearbyBranchDto>(items, totalCount, pagination.PageNumber, pagination.PageSize);
         }

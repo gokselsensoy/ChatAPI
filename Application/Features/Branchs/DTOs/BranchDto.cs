@@ -9,6 +9,7 @@ namespace Application.Features.Branchs.DTOs
         public string Name { get; set; }
         public string? FileId { get; set; }
         public BranchType BranchType { get; set; }
+        public List<string> Tags { get; set; } = new List<string>();
 
         // Adres bilgileri (flattened)
         public string Country { get; set; }

@@ -30,7 +30,8 @@ namespace Application.Features.Branchs.Commands.CreateBranch
                 request.BrandId,
                 address,
                 request.BranchType,
-                request.FileId
+                request.FileId,
+                request.Tags
             );
 
             _branchRepository.Add(newBranch);

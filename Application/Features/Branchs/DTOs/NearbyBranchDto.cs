@@ -8,6 +8,7 @@
         public string Name { get; set; }
         public string? FileId { get; set; }
         public string BranchType { get; set; }
+        public List<string> Tags { get; set; } = new List<string>();
         public string Country { get; set; }
         public string City { get; set; }
         public string District { get; set; }
@@ -26,6 +27,5 @@
         public string FullnessLabel { get; set; }
 
         public double DistanceInMeters { get; set; }
-        public List<string> Tags { get; set; } = new List<string>();
     }
 }

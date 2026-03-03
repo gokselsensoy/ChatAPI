@@ -46,6 +46,22 @@ namespace Infrastructure.Persistence.Repositories
             return await _dbSet.ToListAsync(cancellationToken);
         }
 
+        public async Task<List<T>> GetAllListAsync(
+        Expression<Func<T, bool>>? predicate = null,
+        CancellationToken cancellationToken = default)
+        {
+            IQueryable<T> query = _dbSet.AsNoTracking(); // Sadece okuma yapılacağı için EF Core'u yormuyoruz
+
+            // Eğer dışarıdan bir filtre (Where şartı) gönderildiyse sorguya ekle
+            if (predicate != null)
+            {
+                query = query.Where(predicate);
+            }
+
+            // Veritabanına git ve listeyi getir
+            return await query.ToListAsync(cancellationToken);
+        }
+
         public async Task<bool> AnyAsync(Expression<Func<T, bool>> predicate, CancellationToken cancellationToken = default)
         {
             return await _dbSet.AnyAsync(predicate, cancellationToken);
