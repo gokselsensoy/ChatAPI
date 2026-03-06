@@ -53,6 +53,12 @@ namespace Infrastructure.DependencyInjection
 
             services.AddScoped<IChatRoomInviteRepository, ChatRoomInviteRepository>();
 
+            services.AddScoped<IBlacklistRepository, BlacklistRepository>();
+            services.AddScoped<IBlacklistQueryRepository, BlacklistQueryRepository>();
+
+            services.AddScoped<IMenuRepository, MenuRepository>();
+            services.AddScoped<IMenuQueryRepository, MenuQueryRepository>();
+
             // 5. Diğer servisler (Email vb.)
             // services.AddTransient<IEmailService, EmailService>();
 

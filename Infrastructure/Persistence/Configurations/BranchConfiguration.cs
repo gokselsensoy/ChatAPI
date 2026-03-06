@@ -3,6 +3,8 @@ using Domain.ValueObjects;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
+using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
+using System.Text.Json;
 
 namespace Infrastructure.Persistence.Configurations
 {
@@ -35,23 +37,23 @@ namespace Infrastructure.Persistence.Configurations
                         .HasColumnType("geometry(Point)");
             });
 
-            builder.Property(b => b.Tags)
-                .HasConversion(
-                    // 1. C# objesinden DB'ye yazarken: Tag nesnelerinin içindeki Value'leri al, string listesi yap, onu JSON'a çevir
-                    v => System.Text.Json.JsonSerializer.Serialize(v.Select(t => t.Value), (System.Text.Json.JsonSerializerOptions)null),
+            var tagConverter = new ValueConverter<IReadOnlyCollection<Tag>, string>(
+                        v => JsonSerializer.Serialize(v.Select(t => t.Value).ToList(), (JsonSerializerOptions)null),
+                        v => (JsonSerializer.Deserialize<List<string>>(v, (JsonSerializerOptions)null) ?? new List<string>())
+                             .Select(s => Tag.Create(s)).ToList()
+                    );
 
-                    // 2. DB'den C# objesine okurken: JSON'ı string listesine çevir, sonra her stringi Tag.Create ile Tag nesnesine çevir
-                    v => (System.Text.Json.JsonSerializer.Deserialize<List<string>>(v, (System.Text.Json.JsonSerializerOptions)null) ?? new List<string>())
-                         .Select(s => Tag.Create(s)).ToList()
-                )
-                .Metadata.SetValueComparer(
-                    // 3. Comparer içinde artık string değil 'Tag' olmalı!
-                    new ValueComparer<IReadOnlyCollection<Tag>>(
-                        (c1, c2) => c1.SequenceEqual(c2),
-                        c => c.Aggregate(0, (a, v) => HashCode.Combine(a, v.GetHashCode())),
-                        c => c.ToList().AsReadOnly()
-                    )
-                );
+            // 2. Comparer'ı ayrı bir nesne olarak tanımlıyoruz
+            var tagComparer = new ValueComparer<IReadOnlyCollection<Tag>>(
+                (c1, c2) => c1.SequenceEqual(c2),
+                c => c.Aggregate(0, (a, v) => HashCode.Combine(a, v.GetHashCode())),
+                c => c.ToList().AsReadOnly()
+            );
+
+            // 3. Property'ye bu hazır nesneleri veriyoruz
+            builder.Property(b => b.Tags)
+                .HasConversion(tagConverter) // <--- ARTIK HATA VERMEYECEK
+                .Metadata.SetValueComparer(tagComparer);
 
             builder.Metadata.FindNavigation(nameof(Branch.Tags))
                 ?.SetPropertyAccessMode(PropertyAccessMode.Field);

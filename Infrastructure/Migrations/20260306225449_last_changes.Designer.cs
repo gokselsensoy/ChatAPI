@@ -3,6 +3,7 @@ using System;
 using Infrastructure.Persistence.Context;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using NetTopologySuite.Geometries;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
@@ -12,9 +13,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Infrastructure.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260306225449_last_changes")]
+    partial class last_changes
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -66,7 +69,7 @@ namespace Infrastructure.Migrations
 
                     b.HasIndex("BranchId");
 
-                    b.ToTable("Announcements", (string)null);
+                    b.ToTable("Announcements");
                 });
 
             modelBuilder.Entity("Domain.Entities.Blacklist", b =>
@@ -106,7 +109,7 @@ namespace Infrastructure.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("Blacklist", (string)null);
+                    b.ToTable("Blacklist");
                 });
 
             modelBuilder.Entity("Domain.Entities.Branch", b =>
@@ -469,7 +472,7 @@ namespace Infrastructure.Migrations
 
                     b.HasIndex("MenuId");
 
-                    b.ToTable("MenuItems", (string)null);
+                    b.ToTable("MenuItems");
                 });
 
             modelBuilder.Entity("Domain.Entities.User", b =>
@@ -1062,7 +1065,7 @@ namespace Infrastructure.Migrations
 
                             b1.HasKey("BranchId");
 
-                            b1.ToTable("Branches", (string)null);
+                            b1.ToTable("Branches");
 
                             b1.WithOwner()
                                 .HasForeignKey("BranchId");
