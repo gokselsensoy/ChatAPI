@@ -38,10 +38,15 @@ namespace Infrastructure.Persistence.Configurations
             });
 
             var tagConverter = new ValueConverter<IReadOnlyCollection<Tag>, string>(
-                        v => JsonSerializer.Serialize(v.Select(t => t.Value).ToList(), (JsonSerializerOptions)null),
-                        v => (JsonSerializer.Deserialize<List<string>>(v, (JsonSerializerOptions)null) ?? new List<string>())
-                             .Select(s => Tag.Create(s)).ToList()
-                    );
+                // 1. C# -> DB (Yazarken sorun yok)
+                v => JsonSerializer.Serialize(v.Select(t => t.Value).ToList(), (JsonSerializerOptions)null),
+
+                // 2. DB -> C# (OKURKEN GÜVENLİK EKLENDİ)
+                v => string.IsNullOrWhiteSpace(v)
+                        ? new List<Tag>() // EĞER DB'DEN GELEN VERİ BOŞSA, PATLAMA, DİREKT BOŞ LİSTE DÖN!
+                        : (JsonSerializer.Deserialize<List<string>>(v, (JsonSerializerOptions)null) ?? new List<string>())
+                            .Select(s => Tag.Create(s)).ToList()
+            );
 
             // 2. Comparer'ı ayrı bir nesne olarak tanımlıyoruz
             var tagComparer = new ValueComparer<IReadOnlyCollection<Tag>>(
