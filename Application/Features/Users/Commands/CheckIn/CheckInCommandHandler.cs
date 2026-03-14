@@ -36,29 +36,15 @@ namespace Application.Features.Users.Commands.CheckIn
             if (!branchExists)
                 throw new NotFoundException("Şube bulunamadı.", request.BranchId);
 
-            // --- EKLENEN KRİTİK KISIM: Gerçek User'ı Bulmak ---
-            // request.UserId şu an aslında Token'dan gelen IdentityId. 
-            // IdentityId senin User tablosunda string mi Guid mi tutuluyor bilmiyorum. 
-            // Eğer string ise .ToString() ekleyebilirsin: u.IdentityId == request.UserId.ToString()
-            var appUser = await _userQueryRepo.GetAsync(
-                u => u.IdentityId == request.UserId, // veya u.IdentityId == request.UserId.ToString()
-                cancellationToken);
-
-            if (appUser == null)
-                throw new UnauthorizedAccessException("Uygulama kullanıcı profili bulunamadı.");
-
-            // Artık veritabanı ilişkilerinde kullanacağımız GERÇEK Id bu:
-            var realUserId = appUser.Id;
-            // ---------------------------------------------------
 
             // 2. Mevcut Konumu Getir (Artık realUserId kullanıyoruz)
             var currentLocation = await _userLocationRepository.GetAsync(
-                ul => ul.UserId == realUserId,
+                ul => ul.UserId == request.UserId,
                 cancellationToken);
 
             if (currentLocation == null)
             {
-                currentLocation = UserLocation.Create(realUserId, request.BranchId);
+                currentLocation = UserLocation.Create(request.UserId, request.BranchId);
                 _userLocationRepository.Add(currentLocation);
             }
             else
@@ -68,7 +54,7 @@ namespace Application.Features.Users.Commands.CheckIn
             }
 
             // 3. Geçmiş (History) Kaydı Oluştur (Artık realUserId kullanıyoruz)
-            var historyLog = CheckInHistory.Create(realUserId, request.BranchId);
+            var historyLog = CheckInHistory.Create(request.UserId, request.BranchId);
             _historyRepository.Add(historyLog);
 
             // 4. Veritabanına Kaydet

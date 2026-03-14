@@ -25,22 +25,16 @@ namespace Application.Features.Users.Commands.CheckOut
 
         public async Task<bool> Handle(CheckOutCommand request, CancellationToken cancellationToken)
         {
-            // 1. Gerçek User'ı bul
-            var appUser = await _userQueryRepo.GetAsync(u => u.IdentityId == request.UserId, cancellationToken);
-            if (appUser == null) return true; // Kullanıcı yoksa çıkış yapılmış sayabiliriz
-
-            var realUserId = appUser.Id;
-
             // 2. Artık realUserId ile arıyoruz
             var location = await _locationRepo.GetAsync(
-                ul => ul.UserId == realUserId,
+                ul => ul.UserId == request.UserId,
                 cancellationToken);
 
             if (location == null) return true;
 
             // 3. History'yi de realUserId ile arıyoruz
             var history = await _historyRepo.GetAsync(
-                h => h.UserId == realUserId && h.CheckOutTime == null,
+                h => h.UserId == request.UserId && h.CheckOutTime == null,
                 cancellationToken);
 
             if (history != null)

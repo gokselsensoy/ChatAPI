@@ -73,7 +73,6 @@ namespace WebApi.Controllers
         [HttpPost("check-in")]
         public async Task<IActionResult> CheckIn([FromBody] CheckInCommand command)
         {
-            command.UserId = GetCurrentUserId();
             await _sender.Send(command);
             return Ok(new { Message = "Check-in başarılı." });
         }
@@ -82,14 +81,8 @@ namespace WebApi.Controllers
         /// Kullanıcı mekandan manuel olarak ayrılır (Check-Out).
         /// </summary>
         [HttpPost("check-out")]
-        public async Task<IActionResult> CheckOut()
+        public async Task<IActionResult> CheckOut([FromBody] CheckOutCommand command)
         {
-            // Body'den veri almaya gerek yok, sadece tetiklemek yeterli.
-            var command = new CheckOutCommand
-            {
-                UserId = GetCurrentUserId()
-            };
-
             await _sender.Send(command);
             return Ok(new { Message = "Çıkış işlemi başarılı." });
         }
