@@ -2,9 +2,11 @@
 using Application.Features.Users.DTOs;
 using AutoMapper;
 using AutoMapper.QueryableExtensions;
+using Domain.Entities;
 using Infrastructure.Identity.Models;
 using Infrastructure.Persistence.Context;
 using Microsoft.EntityFrameworkCore;
+using System.Linq.Expressions;
 
 namespace Infrastructure.Persistence.QueryRepositories
 {
@@ -17,6 +19,13 @@ namespace Infrastructure.Persistence.QueryRepositories
         {
             _context = context;
             _mapper = mapper;
+        }
+
+        public async Task<User?> GetAsync(Expression<Func<User, bool>> predicate, CancellationToken cancellationToken = default)
+        {
+            return await _context.Set<User>()
+                .AsNoTracking() // Sadece okuma yapılacaksa bu çok önemlidir
+                .FirstOrDefaultAsync(predicate, cancellationToken);
         }
 
         public async Task<UserDto?> GetByIdAsync(Guid userId, CancellationToken cancellationToken = default)
