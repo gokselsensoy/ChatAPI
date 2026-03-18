@@ -33,14 +33,8 @@ namespace WebApi.Controllers
         /// </summary>
         [HttpGet("public")]
         [ProducesResponseType(typeof(List<ChatRoomDto>), StatusCodes.Status200OK)]
-        public async Task<IActionResult> GetPublicRoomsForMyBranch()
+        public async Task<IActionResult> GetPublicRoomsForMyBranch([FromQuery] GetPublicRoomsByBranchQuery query)
         {
-            var user = await GetMyProfileDto();
-            if (user?.BranchId == null)
-                return BadRequest("Oda listelemek için önce bir şubeye check-in yapmalısınız.");
-
-            var query = new GetPublicRoomsByBranchQuery { BranchId = user.BranchId.Value };
-            // CachingPipelineBehaviour devreye girecek
             var rooms = await _sender.Send(query);
             return Ok(rooms);
         }
@@ -77,8 +71,7 @@ namespace WebApi.Controllers
             var command = new JoinChatRoomCommand
             {
                 RoomId = roomId,
-                UserId = user.Id,
-                UserCurrentBranchId = user.BranchId.Value
+                UserId = user.Id
             };
 
             await _sender.Send(command);

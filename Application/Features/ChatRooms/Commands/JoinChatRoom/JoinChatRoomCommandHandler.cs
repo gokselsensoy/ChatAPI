@@ -16,33 +16,44 @@ namespace Application.Features.ChatRooms.Commands.JoinChatRoom
         private readonly IUserQueryRepository _userQueryRepository; // Kullanıcı bilgisi için
         private readonly INotificationService _notificationService; // SignalR için
         private readonly IBlacklistQueryRepository _blacklistQueryRepository;
+        private readonly IUserLocationQueryRepository _userLocationQueryRepo;
 
         public JoinChatRoomCommandHandler(
             IChatRoomRepository chatRoomRepository, // DEĞİŞTİ
             IUnitOfWork unitOfWork,
             IUserQueryRepository userQueryRepository, // EKLENDİ
             INotificationService notificationService,
-            IBlacklistQueryRepository blacklistQueryRepository)
+            IBlacklistQueryRepository blacklistQueryRepository,
+            IUserLocationQueryRepository userLocationQueryRepo)
         {
             _chatRoomRepository = chatRoomRepository;
             _unitOfWork = unitOfWork;
             _userQueryRepository = userQueryRepository; // EKLENDİ
             _notificationService = notificationService;
             _blacklistQueryRepository = blacklistQueryRepository;
+            _userLocationQueryRepo = userLocationQueryRepo;
         }
 
         public async Task Handle(JoinChatRoomCommand request, CancellationToken cancellationToken)
         {
+            var realUserId = request.UserId; // Gerçek ID olduğunu varsayıyorum
+
             var room = await _chatRoomRepository.GetByIdWithUsersAsync(request.RoomId, cancellationToken);
             if (room == null)
                 throw new NotFoundException(nameof(ChatRoom), request.RoomId);
 
-            bool isBanned = await _blacklistQueryRepository.IsUserBannedAsync(request.UserId, room.BranchId, cancellationToken);
+            bool isBanned = await _blacklistQueryRepository.IsUserBannedAsync(realUserId, room.BranchId, cancellationToken);
             if (isBanned)
                 throw new UnauthorizedAccessException("Bu şubedeki sohbetlere katılmanız engellenmiştir.");
 
-            // 1. İşlemi Yap
-            room.AddUser(request.UserId, room.RoomType, request.UserCurrentBranchId);
+            // YENİ EKLENEN KISIM: Kullanıcının anlık konumunu bul
+            var currentLocation = await _userLocationQueryRepo.GetAsync(ul => ul.UserId == realUserId, cancellationToken);
+            if (currentLocation == null)
+                throw new UnauthorizedAccessException("Bu odaya katılmak için önce bir şubeye check-in yapmalısınız.");
+
+            // 1. İşlemi Yap (Artık yeni Domain metodumuzu ve DB'den gelen BranchId'yi kullanıyoruz)
+            room.JoinPublicRoom(realUserId, currentLocation.BranchId);
+
             await _unitOfWork.SaveChangesAsync(cancellationToken);
 
             // 2. Kullanıcı Adını Bul (Bildirim için gerekli)

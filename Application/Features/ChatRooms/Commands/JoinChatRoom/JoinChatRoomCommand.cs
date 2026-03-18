@@ -8,8 +8,8 @@ namespace Application.Features.ChatRooms.Commands.JoinChatRoom
         public Guid RoomId { get; set; }
 
         [JsonIgnore]
-        public Guid UserId { get; set; } // Token'dan
-        [JsonIgnore]
-        public Guid UserCurrentBranchId { get; set; } // Token'dan (kontrol için)
+        public Guid UserId { get; set; } // Token'dan gelen IdentityId
+
+        // UserCurrentBranchId SİLİNDİ! Biz bulacağız.
     }
 }

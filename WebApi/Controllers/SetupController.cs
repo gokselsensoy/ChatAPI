@@ -1,7 +1,6 @@
 ﻿using Infrastructure.Persistence.Context;
 using Microsoft.AspNetCore.Mvc;
 using OpenIddict.Abstractions;
-using static OpenIddict.Abstractions.OpenIddictConstants;
 
 namespace WebApi.Controllers
 {

@@ -8,10 +8,8 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace WebApi.Controllers
 {
-    // URL Yapısı: api/branches/{branchId}/blacklist
     [Route("api/branches/{branchId}/blacklist")]
     [ApiController]
-    [Authorize] // İdeal olanı [Authorize(Roles = "Admin")] yapmaktır.
     public class BranchBlacklistController : ControllerBase
     {
         private readonly ISender _sender;

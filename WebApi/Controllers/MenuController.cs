@@ -5,6 +5,7 @@ using Application.Features.Menus.Commands.DeleteMenuItem;
 using Application.Features.Menus.Commands.UpdateMenu;
 using Application.Features.Menus.Commands.UpdateMenuItem;
 using MediatR;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace WebApi.Controllers

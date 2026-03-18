@@ -6,6 +6,7 @@ using Application.Features.Branchs.Queries.GetBranchesByBrandId;
 using Application.Features.Branchs.Queries.GetNearbyBranches;
 using Application.Shared.Pagination;
 using MediatR;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace WebApi.Controllers

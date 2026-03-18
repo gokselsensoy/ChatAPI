@@ -20,7 +20,6 @@ namespace Domain.Entities
         // Navigations
         public Brand? Brand { get; private set; }
         public ICollection<ChatRoom> ChatRooms { get; private set; } = new List<ChatRoom>();
-        public ICollection<User> Users { get; private set; } = new List<User>();
         public ICollection<Blacklist> Blacklists { get; private set; } = new List<Blacklist>();
         public ICollection<Menu> Menus { get; private set; } = new List<Menu>();
         public ICollection<Announcement> Announcements { get; private set; } = new List<Announcement>();

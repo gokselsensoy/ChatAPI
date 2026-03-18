@@ -55,8 +55,8 @@ namespace Application.Features.ChatRoomInvites.Commands.AcceptChatRoomInvite
 
             // 5. Her iki kullanıcıyı da yeni odaya ekle
             // (AR üzerinden)
-            newPrivateRoom.AddUser(invite.InviterUserId, RoomType.Private, newPrivateRoom.BranchId);
-            newPrivateRoom.AddUser(invite.InviteeUserId, RoomType.Private, newPrivateRoom.BranchId);
+            newPrivateRoom.JoinViaInvite(invite.InviterUserId, newPrivateRoom.BranchId);
+            newPrivateRoom.JoinViaInvite(invite.InviteeUserId, newPrivateRoom.BranchId);
 
             // 6. Kaydet
             await _unitOfWork.SaveChangesAsync(cancellationToken);

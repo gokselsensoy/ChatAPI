@@ -48,6 +48,8 @@ namespace Infrastructure.DependencyInjection
             services.AddScoped<IUserRepository, UserRepository>();
             services.AddScoped<IUserQueryRepository, UserQueryRepository>();
 
+            services.AddScoped<IUserLocationQueryRepository, UserLocationQueryRepository>();
+
             services.AddScoped<IChatRoomRepository, ChatRoomRepository>();
             services.AddScoped<IChatRoomQueryRepository, ChatRoomQueryRepository>();
 

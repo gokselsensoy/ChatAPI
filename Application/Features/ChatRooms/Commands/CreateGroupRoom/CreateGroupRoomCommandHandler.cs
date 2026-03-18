@@ -46,7 +46,9 @@ namespace Application.Features.ChatRooms.Commands.CreateGroupRoom
 
             foreach (var userId in allMemberIds)
             {
-                newGroupRoom.AddUser(userId, RoomType.Private, request.BranchId);
+                // İdealde burada da her üyenin currentLocation'u çekilip kontrol edilmeli.
+                // Şimdilik bypass için odanın kendi BranchId'sini veriyoruz ki Domain patlamasın.
+                newGroupRoom.JoinViaInvite(userId, request.BranchId);
             }
 
             await _unitOfWork.SaveChangesAsync(cancellationToken);

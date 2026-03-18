@@ -6,6 +6,6 @@ namespace Application.Features.ChatRooms.Queries.GetPublicRoomsByBranch
 {
     public class GetPublicRoomsByBranchQuery : IRequest<List<ChatRoomDto>>
     {
-        public Guid BranchId { get; set; }
+        public Guid UserId { get; set; }
     }
 }

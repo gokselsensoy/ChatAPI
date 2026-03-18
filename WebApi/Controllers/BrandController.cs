@@ -6,6 +6,7 @@ using Application.Features.Brands.Queries.GetAllBrands;
 using Application.Features.Brands.Queries.GetBrandById;
 using Application.Features.Brands.Queries.GetBrandByOwnerUserId;
 using MediatR;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace WebApi.Controllers

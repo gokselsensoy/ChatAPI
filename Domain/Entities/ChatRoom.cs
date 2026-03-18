@@ -50,25 +50,36 @@ namespace Domain.Entities
             RoomType = newRoomType;
             // event fırlatılabilir
         }
-
-        /// <summary>
-        /// Bir kullanıcıyı odaya ekler (Join).
-        /// </summary>
-        public void AddUser(Guid userId, RoomType roomType, Guid userCurrentBranchId)
+        public void JoinPublicRoom(Guid userId, Guid userCurrentBranchId)
         {
             if (BranchId != userCurrentBranchId)
                 throw new ChatRoomDomainException("Bu odaya katılmak için önce şubeye check-in yapmalısınız.");
 
-            if (roomType != RoomType.Public)
+            if (RoomType != RoomType.Public)
                 throw new ChatRoomDomainException("Bu oda gizlidir, sadece davetle girilebilir.");
 
+            AddUserInternal(userId);
+        }
+
+        // 2. Özel odalara davetle veya grubu kurarken katılma
+        public void JoinViaInvite(Guid userId, Guid userCurrentBranchId)
+        {
+            if (BranchId != userCurrentBranchId)
+                throw new ChatRoomDomainException("Bu odaya katılmak için önce şubeye check-in yapmalısınız.");
+
+            AddUserInternal(userId);
+        }
+
+        // Kod tekrarını önlemek için private yardımcı metot
+        private void AddUserInternal(Guid userId)
+        {
             if (ChatRoomUserMaps.Any(m => m.UserId == userId))
-                return;
+                return; // Zaten odadaysa hiçbir şey yapma
 
             var map = ChatRoomUserMap.Create(Id, userId);
             ChatRoomUserMaps.Add(map);
 
-            // event fırlatılabilir: AddDomainEvent(new UserJoinedRoomEvent(Id, userId));
+            // AddDomainEvent(new UserJoinedRoomEvent(Id, userId));
         }
 
         /// <summary>
