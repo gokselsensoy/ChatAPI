@@ -5,13 +5,14 @@ using Application.Features.Users.Queries.GetMyProfile;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using OpenIddict.Validation.AspNetCore;
 using System.Security.Claims;
 
 namespace WebApi.Controllers
 {
+    [Authorize(AuthenticationSchemes = OpenIddictValidationAspNetCoreDefaults.AuthenticationScheme)]
     [ApiController]
     [Route("api/chat-invites")]
-    //[Authorize]
     public class ChatRoomInviteController : ControllerBase
     {
         private readonly ISender _sender;

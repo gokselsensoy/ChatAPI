@@ -8,13 +8,15 @@ using Application.Features.Users.Queries.GetMyProfile;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using OpenIddict.Abstractions;
+using OpenIddict.Validation.AspNetCore;
 using System.Security.Claims;
 
 namespace WebApi.Controllers
 {
+    [Authorize(AuthenticationSchemes = OpenIddictValidationAspNetCoreDefaults.AuthenticationScheme)]
     [ApiController]
     [Route("api/users")]
-    //[Authorize]
     public class UsersController : ControllerBase
     {
         private readonly ISender _sender;
@@ -114,11 +116,16 @@ namespace WebApi.Controllers
         // --- Yardımcı Metot: Token'dan User ID Okuma ---
         private Guid GetCurrentUserId()
         {
-            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value
-                           ?? User.FindFirst("sub")?.Value;
+            // 1. Önce OpenIddict'in resmi standardı olan "sub" (Subject) aranır.
+            // 2. Bulamazsa klasik Identity'nin "NameIdentifier"ına bakar.
+            // 3. O da yoksa düz "sub" string'ini kontrol eder.
+            var userIdClaim = User.FindFirstValue(OpenIddictConstants.Claims.Subject)
+                           ?? User.FindFirstValue(ClaimTypes.NameIdentifier)
+                           ?? User.FindFirstValue("sub");
 
             if (string.IsNullOrEmpty(userIdClaim) || !Guid.TryParse(userIdClaim, out var userId))
             {
+                // Eğer buraya düşüyorsan, token'ın içinde ID gerçekten yok demektir.
                 throw new UnauthorizedAccessException("Geçersiz token. Kullanıcı ID bulunamadı.");
             }
 

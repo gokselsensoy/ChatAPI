@@ -5,9 +5,11 @@ using Application.Features.Blacklists.Queries.GetBannedUsers;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using OpenIddict.Validation.AspNetCore;
 
 namespace WebApi.Controllers
 {
+    [Authorize(AuthenticationSchemes = OpenIddictValidationAspNetCoreDefaults.AuthenticationScheme)]
     [Route("api/branches/{branchId}/blacklist")]
     [ApiController]
     public class BranchBlacklistController : ControllerBase

@@ -12,13 +12,15 @@ using Application.Shared.Pagination;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using OpenIddict.Abstractions;
+using OpenIddict.Validation.AspNetCore;
 using System.Security.Claims;
 
 namespace WebApi.Controllers
 {
+    [Authorize(AuthenticationSchemes = OpenIddictValidationAspNetCoreDefaults.AuthenticationScheme)]
     [ApiController]
     [Route("api/chatrooms")]
-    //[Authorize] // Tüm Chat işlemleri üyelik gerektirir
     public class ChatRoomController : ControllerBase
     {
         private readonly ISender _sender;
@@ -47,12 +49,6 @@ namespace WebApi.Controllers
         [ProducesResponseType(typeof(Guid), StatusCodes.Status201Created)]
         public async Task<IActionResult> CreateRoom([FromBody] CreateChatRoomCommand command)
         {
-            var user = await GetMyProfileDto();
-            if (user?.BranchId == null)
-                return BadRequest("Oda oluşturmak için önce bir şubeye check-in yapmalısınız.");
-
-            command.BranchId = user.BranchId.Value;
-
             var roomId = await _sender.Send(command);
             return CreatedAtAction(nameof(GetMessages), new { roomId = roomId }, new { id = roomId });
         }
@@ -65,8 +61,7 @@ namespace WebApi.Controllers
         public async Task<IActionResult> JoinRoom(Guid roomId)
         {
             var user = await GetMyProfileDto();
-            if (user?.BranchId == null)
-                return BadRequest("Odaya katılmak için önce bir şubeye check-in yapmalısınız.");
+            if (user == null) return Unauthorized();
 
             var command = new JoinChatRoomCommand
             {
@@ -160,16 +155,23 @@ namespace WebApi.Controllers
         // --- Yardımcı Metot ---
         private async Task<UserDto?> GetMyProfileDto()
         {
-            var identityIdString = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            // Önce OpenIddict standardı olan "sub" aranır, yedeği olarak NameIdentifier'a bakılır
+            var identityIdString = User.FindFirstValue(OpenIddictConstants.Claims.Subject)
+                                ?? User.FindFirstValue(ClaimTypes.NameIdentifier);
+
             if (string.IsNullOrEmpty(identityIdString) || !Guid.TryParse(identityIdString, out var identityId))
             {
                 return null;
             }
+
             try
             {
                 return await _sender.Send(new GetMyProfileQuery { IdentityId = identityId });
             }
-            catch (Exception) { return null; }
+            catch (Exception)
+            {
+                return null;
+            }
         }
     }
 

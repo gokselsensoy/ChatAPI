@@ -24,7 +24,7 @@ namespace Application.Features.Menus.Queries.GetCustomerMenu
         {
             // 1. GÜVENLİK (Check-In Kontrolü)
             var userLocation = await _userLocationRepository.GetAsync(
-                ul => ul.UserId == request.CurrentUserId,
+                ul => ul.UserId == request.UserId,
                 cancellationToken);
 
             if (userLocation == null || userLocation.BranchId != request.BranchId)

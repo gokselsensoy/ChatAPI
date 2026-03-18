@@ -11,14 +11,16 @@ namespace Infrastructure.Persistence.Configurations
             builder.ToTable("Menus");
             builder.HasKey(m => m.Id);
 
-            // KRİTİK NOKTA: Bire-Çok İlişki ve Cascade Delete
+            // BUNU BURAYA DA EKLİYORUZ:
+            builder.Property(m => m.Id).ValueGeneratedNever();
+
+            // Bire-Çok İlişki ve Field Mapping ayarların (Aynen kalıyor)
             builder.HasMany(m => m.MenuItems)
                    .WithOne(mi => mi.Menu)
                    .HasForeignKey(mi => mi.MenuId)
-                   .IsRequired() // MenuId null olamaz!
-                   .OnDelete(DeleteBehavior.Cascade); // Menü silinirse veya listeden item çıkarsa DB'den de silinsin.
+                   .IsRequired()
+                   .OnDelete(DeleteBehavior.Cascade);
 
-            // Domain'deki private field'ı EF Core'a tanıtıyoruz (EF Core listeyi buraya dolduracak)
             builder.Metadata.FindNavigation(nameof(Menu.MenuItems))
                    ?.SetPropertyAccessMode(PropertyAccessMode.Field);
         }
