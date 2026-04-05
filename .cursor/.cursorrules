@@ -1,0 +1,29 @@
+# 🚀 PROJE MİMARİSİ VE YAPAY ZEKA DAVRANIŞ KURALLARI
+
+## 🏗️ 1. BACKEND MİMARİ STANDARTLARI (CLEAN ARCHITECTURE, CQRS & DDD)
+- **Katmanlı Mimari:** Proje Clean Architecture prensiplerine uygundur. Domain katmanı asla dışarıya bağımlı olamaz.
+- **DbContext İzolasyonu:** `DbContext` (Örn: `ApplicationDbContext`) sadece ve sadece **Repository** ve **QueryRepository** sınıfları içerisinde kullanılabilir. Handler'lar veya Controller'lar içinde ASLA DbContext çağrılamaz veya inject edilemez.
+- **Domain Mantığı (DDD):** İş kuralları (business logic) Entity'ler içinde olmalıdır. Entity'lerin property setter'ları `private` olmalıdır. Nesneler sadece kendi içlerindeki metotlarla (Örn: `Menu.AddItem(...)`) veya Factory metotlarla (`Menu.Create(...)`) oluşturulmalı/güncellenmelidir. Sınıflardaki boş constructor'lar EF Core için `private` bırakılmalıdır.
+- **Aggregate Root & Include:** Bir Aggregate Root (Örn: `Menu`) üzerinden alt elemanlara (Örn: `MenuItem`) işlem yapılacaksa, Command Repository'den nesne çekilirken mutlaka alt elemanlar `.Include()` ile getirilmelidir.
+
+## 💾 2. ENTITY FRAMEWORK CORE & VERİTABANI (POSTGRESQL/SUPABASE)
+- **ID Üretimi (KRİTİK):** Primary Key'ler (Id) daima `Guid` tipindedir ve Domain katmanında (`Guid.NewGuid()`) üretilir. Bu nedenle EF Core `Configuration` sınıflarında Id'ler için KESİNLİKLE `builder.Property(x => x.Id).ValueGeneratedNever();` kullanılmalıdır! (Aksi takdirde Supabase insert işlemlerinde Concurrency hatası fırlatır).
+- **Backing Fields:** Domain içindeki `private readonly List<T>` alanları EF Core'a tanıtılmalıdır. (Örn: `builder.Metadata.FindNavigation(nameof(Menu.MenuItems))?.SetPropertyAccessMode(PropertyAccessMode.Field);`)
+- **Query Repoları (Performans):** `I...QueryRepository` arayüzleri hiçbir temel sınıftan kalıtım almaz. Performans için okuma işlemlerinde `.AsNoTracking()` kullanımı ZORUNLUDUR. Soft delete varsa mutlaka `.Where(x => !x.IsDeleted)` filtresi eklenmelidir.
+- **Unit of Work:** Yazma (Command) işlemlerinde değişikliklerin kaydedilmesi için mutlaka `UnitOfWork` kullanılmalıdır.
+
+## 🔒 3. GÜVENLİK (OPENIDDICT) VE CONTROLLER STANDARTLARI
+- **Kimlik Doğrulama Şeması:** Projede standart JWT kütüphanesi değil, **OpenIddict** kullanılmaktadır. Controller'larda yetkilendirme KESİNLİKLE `[Authorize(AuthenticationSchemes = OpenIddictValidationAspNetCoreDefaults.AuthenticationScheme)]` şeklinde olmalıdır.
+- **User Context:** Kullanıcı ID bilgileri `[FromBody]` veya URL'den alınmaz! Token içindeki claim'lerden (öncelikle `sub` veya `ClaimTypes.NameIdentifier`) güvenli bir şekilde okunmalıdır.
+- **Kalıtım:** Tüm Controller sınıfları projeye özgü Base Controller'dan (Örn: `ApiControllerBase`) kalıtım almalıdır.
+- **Response Modelleri:** API yanıtları standartlaştırılmalıdır. Her zaman `Result<T>` modeli kullanılacak. Büyük listelerde `Result<PaginatedResponse<T>>` yapısı zorunludur.
+
+## 📝 4. API DOKÜMANTASYONU VE DEĞİŞİKLİK BİLDİRİMLERİ
+- **Dokümantasyon Konumu:** Projenin ana dizininde dokümantasyon dosyaları tutulur (Örn: `ControllerName-Endpoints.md`).
+- **Endpoint Değişiklikleri:** Mevcut bir endpoint'in adını (route), aldığı request/response modelini (DTO) veya HTTP metodunu değiştirirsen; bunu bana mutlaka bildir ve dokümantasyon dosyasını anında güncelle.
+- **Yeni Endpoint:** Yeni bir Controller veya endpoint yazdığında, API dokümantasyonunu (HTTP metodu, route, yetki, payload) mutlaka oluştur.
+
+## 🤖 5. CURSOR AI DAVRANIŞ KURALLARI (STRICT)
+- **Eksik Kod Bırakma:** Kod üretirken `// ... existing code ...` veya `// ... diğer ayarlar ...` gibi geçiştirmeler yapma. Kodu çalıştığı haliyle, TAM blok olarak ver.
+- **İçe Aktarmalar (Usings):** Yeni bir sınıf/metot/arayüz kullandığında gerekli C# `using` satırlarını dosyanın en üstüne mutlaka ekle.
+- **Adlandırma ve DI:** Interface'ler `I` ile başlamalı, sınıflardaki private field'lar `_` ile başlamalıdır (Örn: `_userRepository`). Yeni bir Repository veya Service oluşturduğunda, DI (Dependency Injection) kayıtlarına (`AddScoped` vs.) eklenmesi gerektiğini bana mutlaka hatırlat.
