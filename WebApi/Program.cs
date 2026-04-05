@@ -107,11 +107,11 @@ try
             options.AllowPasswordFlow();
             options.AllowRefreshTokenFlow();
 
-            options.AddDevelopmentEncryptionCertificate() // Sadece Development için
-                   .AddDevelopmentSigningCertificate();  // Sadece Development için
+            //options.AddDevelopmentEncryptionCertificate() // Sadece Development için
+             //      .AddDevelopmentSigningCertificate();  // Sadece Development için
 
-            //options.AddEphemeralEncryptionKey()
-            //        .AddEphemeralSigningKey();
+            options.AddEphemeralEncryptionKey()
+                    .AddEphemeralSigningKey();
 
             options.UseAspNetCore()
                    .EnableTokenEndpointPassthrough();
