@@ -107,11 +107,28 @@ try
             options.AllowPasswordFlow();
             options.AllowRefreshTokenFlow();
 
-            //options.AddDevelopmentEncryptionCertificate() // Sadece Development için
-             //      .AddDevelopmentSigningCertificate();  // Sadece Development için
-
-            options.AddEphemeralEncryptionKey()
-                    .AddEphemeralSigningKey();
+            // Geliştirme sertifikası yalnızca makinede dotnet dev-certs yüklüyse çalışır; IIS/Azure vb.
+            // ortamda Development ayarı açık kalmışsa AddDevelopment* burada fırlatır ve 500.30 üretir.
+            if (builder.Environment.IsDevelopment())
+            {
+                try
+                {
+                    options.AddDevelopmentEncryptionCertificate()
+                           .AddDevelopmentSigningCertificate();
+                }
+                catch (Exception)
+                {
+                    // CryptographicException, InvalidOperationException (sertifika yok) vb.
+                    options.AddEphemeralEncryptionKey()
+                           .AddEphemeralSigningKey();
+                }
+            }
+            else
+            {
+                // Production: kalıcı şifreleme/imza için gerçek sertifika veya Azure Key Vault vb. eklenmeli
+                options.AddEphemeralEncryptionKey()
+                        .AddEphemeralSigningKey();
+            }
 
             options.UseAspNetCore()
                    .EnableTokenEndpointPassthrough();

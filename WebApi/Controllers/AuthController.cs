@@ -132,9 +132,28 @@ namespace WebApi.Controllers
             if (openIddictRequest.IsRefreshTokenGrantType())
             {
                 var info = await HttpContext.AuthenticateAsync(OpenIddictServerAspNetCoreDefaults.AuthenticationScheme);
-                var user = await _userManager.GetUserAsync(info.Principal);
+                if (!info.Succeeded)
+                {
+                    return InvalidGrant("Geçersiz refresh token.");
+                }
 
-                if (user == null || !await _signInManager.CanSignInAsync(user))
+                var user = await _userManager.GetUserAsync(info.Principal);
+                if (user == null)
+                {
+                    return InvalidGrant("Refresh token artık geçerli değil.");
+                }
+
+                var stampInPrincipal = info.Principal.FindFirstValue("AspNet.Identity.SecurityStamp");
+                if (!string.IsNullOrEmpty(stampInPrincipal))
+                {
+                    var currentStamp = await _userManager.GetSecurityStampAsync(user);
+                    if (stampInPrincipal != currentStamp)
+                    {
+                        return InvalidGrant("Refresh token artık geçerli değil.");
+                    }
+                }
+
+                if (!await _signInManager.CanSignInAsync(user))
                 {
                     return InvalidGrant("Refresh token artık geçerli değil.");
                 }
@@ -179,15 +198,22 @@ namespace WebApi.Controllers
 
         private static IEnumerable<string> GetDestinations(Claim claim)
         {
-            // Tüm claimler Access Token'a gitsin (API yetki kontrolü için)
+            // OpenIddict 7'de yalnızca access_token / id_token hedefleri var; refresh ticket EF üzerinden
+            // authorization ile ilişkilidir. Güvenlik damgasını bearer access token'a sızdırmamak için
+            // access/id token hedeflerinden çıkarıyoruz (refresh isteğinde principal yine DB'den gelir).
+            if (claim.Type == "AspNet.Identity.SecurityStamp")
+            {
+                yield break;
+            }
+
             yield return Destinations.AccessToken;
 
-            // Bazı önemli claimler Identity Token'a da gitsin (Frontend profili görsün diye)
             switch (claim.Type)
             {
                 case Claims.Name:
                 case Claims.Email:
-                case Claims.Subject: // User ID
+                case Claims.Subject:
+                case ClaimTypes.NameIdentifier:
                 case Claims.Role:
                     yield return Destinations.IdentityToken;
                     yield break;
