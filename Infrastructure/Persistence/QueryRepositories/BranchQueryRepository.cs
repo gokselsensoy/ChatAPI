@@ -117,5 +117,86 @@ namespace Infrastructure.Persistence.QueryRepositories
 
             return new PaginatedResponse<NearbyBranchDto>(items, totalCount, pagination.PageNumber, pagination.PageSize);
         }
+
+        public async Task<bool> CanUserManageBranchAsync(Guid userId, Guid branchId, CancellationToken cancellationToken = default)
+        {
+            return await _context.Branches
+                .AsNoTracking()
+                .Where(b => b.Id == branchId)
+                .AnyAsync(b => b.Brand!.OwnerUserId == userId
+                    || _context.BranchAdminMaps.Any(m => m.BranchId == branchId && m.UserId == userId),
+                    cancellationToken);
+        }
+
+        public async Task<HashSet<Guid>> GetBranchPrivilegedUserIdsAsync(Guid branchId, CancellationToken cancellationToken = default)
+        {
+            var ownerUserId = await _context.Branches
+                .AsNoTracking()
+                .Where(b => b.Id == branchId)
+                .Select(b => (Guid?)b.Brand!.OwnerUserId)
+                .FirstOrDefaultAsync(cancellationToken);
+
+            var mapped = await _context.BranchAdminMaps
+                .AsNoTracking()
+                .Where(m => m.BranchId == branchId)
+                .Select(m => m.UserId)
+                .ToListAsync(cancellationToken);
+
+            var set = new HashSet<Guid>(mapped);
+            if (ownerUserId.HasValue)
+                set.Add(ownerUserId.Value);
+
+            return set;
+        }
+
+        public async Task<Guid?> GetBrandOwnerUserIdForBranchAsync(Guid branchId, CancellationToken cancellationToken = default)
+        {
+            return await _context.Branches
+                .AsNoTracking()
+                .Where(b => b.Id == branchId)
+                .Select(b => (Guid?)b.Brand!.OwnerUserId)
+                .FirstOrDefaultAsync(cancellationToken);
+        }
+
+        public async Task<List<BranchAdminListItemDto>> GetBranchAdminsAsync(Guid branchId, CancellationToken cancellationToken = default)
+        {
+            var ownerUserId = await GetBrandOwnerUserIdForBranchAsync(branchId, cancellationToken);
+
+            var delegatedIds = await _context.BranchAdminMaps
+                .AsNoTracking()
+                .Where(m => m.BranchId == branchId)
+                .Select(m => m.UserId)
+                .ToListAsync(cancellationToken);
+
+            var idSet = new HashSet<Guid>(delegatedIds);
+            if (ownerUserId.HasValue)
+                idSet.Add(ownerUserId.Value);
+
+            if (idSet.Count == 0)
+                return new List<BranchAdminListItemDto>();
+
+            var delegatedSet = delegatedIds.ToHashSet();
+
+            var users = await _context.Users
+                .AsNoTracking()
+                .Where(u => idSet.Contains(u.Id))
+                .OrderBy(u => u.UserName)
+                .ToListAsync(cancellationToken);
+
+            var items = users.Select(u => new BranchAdminListItemDto
+            {
+                UserId = u.Id,
+                UserName = u.UserName,
+                FirstName = u.FirstName,
+                LastName = u.LastName,
+                IsBrandOwner = ownerUserId.HasValue && u.Id == ownerUserId.Value,
+                IsDelegatedAdmin = delegatedSet.Contains(u.Id)
+            }).ToList();
+
+            return items
+                .OrderByDescending(i => i.IsBrandOwner)
+                .ThenBy(i => i.UserName)
+                .ToList();
+        }
     }
 }

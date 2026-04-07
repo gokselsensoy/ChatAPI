@@ -28,8 +28,7 @@ namespace Application.Features.Users.Commands.CreateUser
                 request.IdentityId,
                 request.UserName,
                 request.FirstName,
-                request.LastName,
-                request.UserType
+                request.LastName
             );
 
             _userRepository.Add(userProfile);

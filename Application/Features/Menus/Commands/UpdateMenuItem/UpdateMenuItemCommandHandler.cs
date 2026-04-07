@@ -1,4 +1,5 @@
-﻿using Application.Exceptions;
+﻿using Application.Abstractions.QueryRepositories;
+using Application.Exceptions;
 using Domain.Entities;
 using Domain.Repositories;
 using Domain.SeedWork;
@@ -10,19 +11,26 @@ namespace Application.Features.Menus.Commands.UpdateMenuItem
     {
         private readonly IMenuRepository _menuCommandRepository;
         private readonly IUnitOfWork _unitOfWork;
+        private readonly IBranchQueryRepository _branchQueryRepository;
 
-        public UpdateMenuItemCommandHandler(IMenuRepository menuCommandRepository, IUnitOfWork unitOfWork)
+        public UpdateMenuItemCommandHandler(
+            IMenuRepository menuCommandRepository,
+            IUnitOfWork unitOfWork,
+            IBranchQueryRepository branchQueryRepository)
         {
             _menuCommandRepository = menuCommandRepository;
             _unitOfWork = unitOfWork;
+            _branchQueryRepository = branchQueryRepository;
         }
 
         public async Task<bool> Handle(UpdateMenuItemCommand request, CancellationToken cancellationToken)
         {
-            // 1. Menüyü ürünleriyle beraber çek
             var menu = await _menuCommandRepository.GetByIdWithItemsAsync(request.MenuId, cancellationToken);
             if (menu == null)
                 throw new NotFoundException(nameof(Menu), request.MenuId);
+
+            if (!await _branchQueryRepository.CanUserManageBranchAsync(request.ActingUserId, menu.BranchId, cancellationToken))
+                throw new UnauthorizedAccessException("Bu şube menüsünde ürün güncelleme yetkiniz yok.");
 
             // 2. İşlemi Aggregate Root'a (Menu) devret
             // Not: UpdateItem metodunu bir önceki adımda Menu entity'sine eklemiştik

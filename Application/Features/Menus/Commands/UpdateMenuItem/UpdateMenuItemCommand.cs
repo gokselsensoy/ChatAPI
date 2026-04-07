@@ -5,6 +5,7 @@ namespace Application.Features.Menus.Commands.UpdateMenuItem
 {
     public class UpdateMenuItemCommand : IRequest<bool>
     {
+        public Guid ActingUserId { get; set; }
         public Guid MenuId { get; set; }
         public Guid MenuItemId { get; set; }
         public string Name { get; set; }

@@ -1,11 +1,14 @@
-﻿using Application.Features.Blacklists.Commands.BanUser;
+﻿using Application.Abstractions.QueryRepositories;
+using Application.Features.Blacklists.Commands.BanUser;
 using Application.Features.Blacklists.Commands.LiftBan;
 using Application.Features.Blacklists.Commands.UpdateBan;
 using Application.Features.Blacklists.Queries.GetBannedUsers;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using OpenIddict.Abstractions;
 using OpenIddict.Validation.AspNetCore;
+using System.Security.Claims;
 
 namespace WebApi.Controllers
 {
@@ -15,10 +18,12 @@ namespace WebApi.Controllers
     public class BranchBlacklistController : ControllerBase
     {
         private readonly ISender _sender;
+        private readonly IUserQueryRepository _userQueryRepository;
 
-        public BranchBlacklistController(ISender sender)
+        public BranchBlacklistController(ISender sender, IUserQueryRepository userQueryRepository)
         {
             _sender = sender;
+            _userQueryRepository = userQueryRepository;
         }
 
         /// <summary>
@@ -36,11 +41,11 @@ namespace WebApi.Controllers
         /// Kullanıcıyı şubeden banlar. (Daha önce yazdığımız BanUserCommand)
         /// </summary>
         [HttpPost]
-        public async Task<IActionResult> BanUser(Guid branchId, [FromBody] BanUserCommand command)
+        public async Task<IActionResult> BanUser(Guid branchId, [FromBody] BanUserCommand command, CancellationToken cancellationToken)
         {
-            // URL'den gelen branchId'yi Command'e atıyoruz ki güvenlik açığı olmasın
             command.BranchId = branchId;
-            await _sender.Send(command);
+            command.ActingUserId = await GetActingDomainUserIdAsync(cancellationToken);
+            await _sender.Send(command, cancellationToken);
 
             return Ok(new { Message = "Kullanıcı başarıyla şubeden uzaklaştırıldı." });
         }
@@ -49,11 +54,12 @@ namespace WebApi.Controllers
         /// Kullanıcının ceza (ban) süresini günceller/uzatır.
         /// </summary>
         [HttpPut("{userId}")]
-        public async Task<IActionResult> UpdateBan(Guid branchId, Guid userId, [FromBody] UpdateBanCommand command)
+        public async Task<IActionResult> UpdateBan(Guid branchId, Guid userId, [FromBody] UpdateBanCommand command, CancellationToken cancellationToken)
         {
             command.BranchId = branchId;
             command.UserId = userId;
-            await _sender.Send(command);
+            command.ActingUserId = await GetActingDomainUserIdAsync(cancellationToken);
+            await _sender.Send(command, cancellationToken);
 
             return NoContent();
         }
@@ -62,17 +68,33 @@ namespace WebApi.Controllers
         /// Kullanıcının banını kaldırır (Affeder).
         /// </summary>
         [HttpDelete("{userId}")]
-        public async Task<IActionResult> LiftBan(Guid branchId, Guid userId)
+        public async Task<IActionResult> LiftBan(Guid branchId, Guid userId, CancellationToken cancellationToken)
         {
             var command = new LiftBanCommand
             {
                 BranchId = branchId,
-                UserId = userId
+                UserId = userId,
+                ActingUserId = await GetActingDomainUserIdAsync(cancellationToken)
             };
 
-            await _sender.Send(command);
+            await _sender.Send(command, cancellationToken);
 
             return Ok(new { Message = "Kullanıcının yasağı kaldırıldı." });
+        }
+
+        private async Task<Guid> GetActingDomainUserIdAsync(CancellationToken cancellationToken)
+        {
+            var identityIdClaim = User.FindFirstValue(OpenIddictConstants.Claims.Subject)
+                ?? User.FindFirstValue(ClaimTypes.NameIdentifier)
+                ?? User.FindFirstValue("sub");
+
+            if (string.IsNullOrEmpty(identityIdClaim) || !Guid.TryParse(identityIdClaim, out var identityId))
+                throw new UnauthorizedAccessException("Geçersiz token. Kullanıcı ID bulunamadı.");
+
+            var user = await _userQueryRepository.GetByIdentityIdAsync(identityId, cancellationToken)
+                ?? throw new UnauthorizedAccessException("Kullanıcı profili bulunamadı.");
+
+            return user.Id;
         }
     }
 }

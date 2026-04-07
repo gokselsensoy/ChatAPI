@@ -1,4 +1,5 @@
-﻿using Domain.Entities;
+﻿using Application.Abstractions.QueryRepositories;
+using Domain.Entities;
 using Domain.SeedWork;
 using MediatR;
 
@@ -8,15 +9,23 @@ namespace Application.Features.Blacklists.Commands.LiftBan
     {
         private readonly IRepository<Blacklist> _blacklistRepo;
         private readonly IUnitOfWork _unitOfWork;
+        private readonly IBranchQueryRepository _branchQueryRepository;
 
-        public LiftBanCommandHandler(IRepository<Blacklist> blacklistRepo, IUnitOfWork unitOfWork)
+        public LiftBanCommandHandler(
+            IRepository<Blacklist> blacklistRepo,
+            IUnitOfWork unitOfWork,
+            IBranchQueryRepository branchQueryRepository)
         {
             _blacklistRepo = blacklistRepo;
             _unitOfWork = unitOfWork;
+            _branchQueryRepository = branchQueryRepository;
         }
 
         public async Task<bool> Handle(LiftBanCommand request, CancellationToken cancellationToken)
         {
+            if (!await _branchQueryRepository.CanUserManageBranchAsync(request.ActingUserId, request.BranchId, cancellationToken))
+                throw new UnauthorizedAccessException("Bu şube için yasağı kaldırma yetkiniz yok.");
+
             // Aktif ban kaydını bul
             var blacklist = await _blacklistRepo.GetAsync(b => b.BranchId == request.BranchId && b.UserId == request.UserId && (b.FinishTime == null || b.FinishTime > DateTime.UtcNow), cancellationToken);
 

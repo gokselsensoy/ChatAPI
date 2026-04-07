@@ -23,6 +23,7 @@ namespace Domain.Entities
         public ICollection<Blacklist> Blacklists { get; private set; } = new List<Blacklist>();
         public ICollection<Menu> Menus { get; private set; } = new List<Menu>();
         public ICollection<Announcement> Announcements { get; private set; } = new List<Announcement>();
+        public ICollection<BranchAdminMap> BranchAdminMaps { get; private set; } = new List<BranchAdminMap>();
 
         private Branch() { }
 
@@ -146,6 +147,35 @@ namespace Domain.Entities
 
             // Detaylar değiştiğinde de event fırlatılabilir
             AddDomainEvent(new BranchAddressUpdatedDomainEvent(Id));
+        }
+
+        /// <summary>
+        /// Marka sahibi dışındaki kullanıcıları şube yöneticisi olarak atamak için (BranchAdminMap).
+        /// </summary>
+        public void AssignDelegatedAdmin(Guid userId)
+        {
+            if (userId == Guid.Empty)
+                throw new BranchDomainException("Kullanıcı Id geçersiz.");
+
+            if (BranchAdminMaps.Any(m => m.UserId == userId))
+                throw new BranchDomainException("Bu kullanıcı zaten bu şube için atanmış yönetici.");
+
+            BranchAdminMaps.Add(BranchAdminMap.Create(Id, userId));
+        }
+
+        /// <summary>
+        /// BranchAdminMap üzerinden atanmış yöneticiliği kaldırır. Marka sahibi için map kaydı yoksa işlem uygulanamaz.
+        /// </summary>
+        public void RemoveDelegatedAdmin(Guid userId)
+        {
+            if (userId == Guid.Empty)
+                throw new BranchDomainException("Kullanıcı Id geçersiz.");
+
+            var map = BranchAdminMaps.FirstOrDefault(m => m.UserId == userId);
+            if (map == null)
+                throw new BranchDomainException("Bu kullanıcı bu şubenin atanmış yöneticileri arasında değil.");
+
+            BranchAdminMaps.Remove(map);
         }
     }
 }

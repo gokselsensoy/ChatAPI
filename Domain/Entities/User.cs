@@ -1,5 +1,4 @@
-﻿using Domain.Enums;
-using Domain.Events.UserEvents;
+﻿using Domain.Events.UserEvents;
 using Domain.Exceptions;
 using Domain.SeedWork;
 
@@ -11,11 +10,11 @@ namespace Domain.Entities
         public string UserName { get; private set; }
         public string FirstName { get; private set; }
         public string LastName { get; private set; }
-        public UserType UserType { get; private set; }
         public string? FileId { get; private set; }
 
         public ICollection<ChatRoomMessage> SentMessages { get; private set; } = new List<ChatRoomMessage>();
         public ICollection<ChatRoomUserMap> ChatRoomMaps { get; private set; } = new List<ChatRoomUserMap>();
+        public ICollection<BranchAdminMap> BranchAdminMaps { get; private set; } = new List<BranchAdminMap>();
         public ICollection<ChatRoomInvite> SentInvites { get; private set; } = new List<ChatRoomInvite>();
         public ICollection<ChatRoomInvite> ReceivedInvites { get; private set; } = new List<ChatRoomInvite>();
 
@@ -23,7 +22,7 @@ namespace Domain.Entities
 
         // --- Fabrika Metodu ---
         // Bu, RegisterCommandHandler tarafından çağrılır
-        public static User Create(Guid identityId, string userName, string firstName, string lastName, UserType userType)
+        public static User Create(Guid identityId, string userName, string firstName, string lastName)
         {
             if (identityId == Guid.Empty)
                 throw new UserDomainException("IdentityId (AspNetUsers.Id) boş olamaz.");
@@ -37,8 +36,7 @@ namespace Domain.Entities
                 IdentityId = identityId,
                 UserName = userName,
                 FirstName = firstName,
-                LastName = lastName,
-                UserType = userType
+                LastName = lastName
             };
 
             user.AddDomainEvent(new UserCreatedDomainEvent(user.Id, user.IdentityId, user.UserName));

@@ -5,6 +5,7 @@ namespace Application.Features.Menus.Commands.CreateMenu
 {
     public class CreateMenuCommand : IRequest<Guid>
     {
+        public Guid ActingUserId { get; set; }
         public Guid BranchId { get; set; }
         public string Title { get; set; }
         public string Description { get; set; }

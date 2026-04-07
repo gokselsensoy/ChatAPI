@@ -75,7 +75,8 @@ namespace Application.Features.ChatRooms.Queries.GetChatRoomMessages
             // Kuralları geçtiyse mesajları getir
             return await _queryRepository.GetMessagesForRoomAsync(
                 request.RoomId,
-                room.RoomType, // 2 saatlik kural için
+                room.BranchId,
+                room.RoomType,
                 request,
                 currentLocalUserId,
                 cancellationToken

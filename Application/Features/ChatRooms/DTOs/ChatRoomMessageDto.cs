@@ -9,5 +9,8 @@
         public string Message { get; set; }
         public DateTime CreatedDate { get; set; }
         public bool IsMine { get; set; }
+
+        /// <summary>Şubede admin/marka sahibi ise "Admin", aksi halde "Müşteri".</summary>
+        public string SenderRole { get; set; } = string.Empty;
     }
 }

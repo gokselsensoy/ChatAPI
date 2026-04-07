@@ -1,4 +1,5 @@
-﻿using Application.Features.Menus.Commands.AddMenuItem;
+﻿using Application.Abstractions.QueryRepositories;
+using Application.Features.Menus.Commands.AddMenuItem;
 using Application.Features.Menus.Commands.CreateMenu;
 using Application.Features.Menus.Commands.DeleteMenu;
 using Application.Features.Menus.Commands.DeleteMenuItem;
@@ -21,10 +22,12 @@ namespace WebApi.Controllers
     public class MenuController : ControllerBase
     {
         private readonly ISender _sender;
+        private readonly IUserQueryRepository _userQueryRepository;
 
-        public MenuController(ISender sender)
+        public MenuController(ISender sender, IUserQueryRepository userQueryRepository)
         {
             _sender = sender;
+            _userQueryRepository = userQueryRepository;
         }
 
         /// <summary>
@@ -43,9 +46,10 @@ namespace WebApi.Controllers
         }
 
         [HttpPost]
-        public async Task<IActionResult> CreateMenu([FromBody] CreateMenuCommand command)
+        public async Task<IActionResult> CreateMenu([FromBody] CreateMenuCommand command, CancellationToken cancellationToken)
         {
-            var menuId = await _sender.Send(command);
+            command.ActingUserId = await GetActingDomainUserIdAsync(cancellationToken);
+            var menuId = await _sender.Send(command, cancellationToken);
             return Ok(new { Message = "Menü başarıyla oluşturuldu.", MenuId = menuId });
         }
 
@@ -68,44 +72,51 @@ namespace WebApi.Controllers
 
 
         [HttpPost("{menuId}/items")]
-        public async Task<IActionResult> AddMenuItem(Guid menuId, [FromBody] AddMenuItemCommand command)
+        public async Task<IActionResult> AddMenuItem(Guid menuId, [FromBody] AddMenuItemCommand command, CancellationToken cancellationToken)
         {
-            // Hangi menüye ekleneceğini URL'den alıyoruz
             command.MenuId = menuId;
-            var itemId = await _sender.Send(command);
+            command.ActingUserId = await GetActingDomainUserIdAsync(cancellationToken);
+            var itemId = await _sender.Send(command, cancellationToken);
 
             return Ok(new { Message = "Ürün menüye eklendi.", ItemId = itemId });
         }
 
         [HttpPut("{menuId}/items/{itemId}")]
-        public async Task<IActionResult> UpdateItem(Guid menuId, Guid itemId, [FromBody] UpdateMenuItemCommand command)
+        public async Task<IActionResult> UpdateItem(Guid menuId, Guid itemId, [FromBody] UpdateMenuItemCommand command, CancellationToken cancellationToken)
         {
             command.MenuId = menuId;
             command.MenuItemId = itemId;
-            await _sender.Send(command);
+            command.ActingUserId = await GetActingDomainUserIdAsync(cancellationToken);
+            await _sender.Send(command, cancellationToken);
             return NoContent();
         }
 
         [HttpDelete("{menuId}/items/{itemId}")]
-        public async Task<IActionResult> DeleteItem(Guid menuId, Guid itemId)
+        public async Task<IActionResult> DeleteItem(Guid menuId, Guid itemId, CancellationToken cancellationToken)
         {
-            var command = new DeleteMenuItemCommand { MenuId = menuId, MenuItemId = itemId };
-            await _sender.Send(command);
+            var command = new DeleteMenuItemCommand
+            {
+                MenuId = menuId,
+                MenuItemId = itemId,
+                ActingUserId = await GetActingDomainUserIdAsync(cancellationToken)
+            };
+            await _sender.Send(command, cancellationToken);
             return NoContent();
         }
 
-        private Guid GetCurrentUserId()
+        private async Task<Guid> GetActingDomainUserIdAsync(CancellationToken cancellationToken)
         {
-            var userIdClaim = User.FindFirstValue(OpenIddictConstants.Claims.Subject)
-                           ?? User.FindFirstValue(ClaimTypes.NameIdentifier)
-                           ?? User.FindFirstValue("sub");
+            var identityIdClaim = User.FindFirstValue(OpenIddictConstants.Claims.Subject)
+                ?? User.FindFirstValue(ClaimTypes.NameIdentifier)
+                ?? User.FindFirstValue("sub");
 
-            if (string.IsNullOrEmpty(userIdClaim) || !Guid.TryParse(userIdClaim, out var userId))
-            {
+            if (string.IsNullOrEmpty(identityIdClaim) || !Guid.TryParse(identityIdClaim, out var identityId))
                 throw new UnauthorizedAccessException("Geçersiz token. Kullanıcı ID bulunamadı.");
-            }
 
-            return userId;
+            var user = await _userQueryRepository.GetByIdentityIdAsync(identityId, cancellationToken)
+                ?? throw new UnauthorizedAccessException("Kullanıcı profili bulunamadı.");
+
+            return user.Id;
         }
     }
 }

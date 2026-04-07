@@ -10,6 +10,7 @@ namespace Application.Abstractions.QueryRepositories
 
         Task<PaginatedResponse<ChatRoomMessageDto>> GetMessagesForRoomAsync(
         Guid roomId,
+        Guid branchId,
         RoomType roomType,
         PaginatedRequest pagination,
         Guid currentUserId,

@@ -1,8 +1,8 @@
-﻿using MediatR;
+using MediatR;
 
-namespace Application.Features.Blacklists.Commands.LiftBan
+namespace Application.Features.Branchs.Commands.RemoveBranchAdmin
 {
-    public class LiftBanCommand : IRequest<bool>
+    public class RemoveBranchAdminCommand : IRequest<bool>
     {
         public Guid ActingUserId { get; set; }
         public Guid BranchId { get; set; }

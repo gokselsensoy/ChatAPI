@@ -10,7 +10,9 @@ namespace Application.Mappings
         {
             CreateMap<ChatRoomMessage, ChatRoomMessageDto>()
                 .ForMember(dest => dest.SenderUserName,
-                           opt => opt.MapFrom(src => src.SenderUser.UserName));
+                           opt => opt.MapFrom(src => src.SenderUser.UserName))
+                .ForMember(dest => dest.SenderRole, opt => opt.Ignore())
+                .ForMember(dest => dest.IsMine, opt => opt.Ignore());
         }
     }
 }

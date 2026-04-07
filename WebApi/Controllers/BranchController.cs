@@ -1,6 +1,10 @@
-﻿using Application.Features.Branchs.Commands.CreateBranch;
+﻿using Application.Abstractions.QueryRepositories;
+using Application.Features.Branchs.Commands.AssignBranchAdmin;
+using Application.Features.Branchs.Commands.CreateBranch;
+using Application.Features.Branchs.Commands.RemoveBranchAdmin;
 using Application.Features.Branchs.Commands.UpdateBranch;
 using Application.Features.Branchs.DTOs;
+using Application.Features.Branchs.Queries.GetBranchAdmins;
 using Application.Features.Branchs.Queries.GetBranchById;
 using Application.Features.Branchs.Queries.GetBranchesByBrandId;
 using Application.Features.Branchs.Queries.GetNearbyBranches;
@@ -8,7 +12,10 @@ using Application.Shared.Pagination;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using OpenIddict.Abstractions;
 using OpenIddict.Validation.AspNetCore;
+using System.Security.Claims;
+using WebApi.Contracts;
 
 namespace WebApi.Controllers
 {
@@ -18,10 +25,12 @@ namespace WebApi.Controllers
     public class BranchController : ControllerBase
     {
         private readonly ISender _sender;
+        private readonly IUserQueryRepository _userQueryRepository;
 
-        public BranchController(ISender sender)
+        public BranchController(ISender sender, IUserQueryRepository userQueryRepository)
         {
             _sender = sender;
+            _userQueryRepository = userQueryRepository;
         }
 
         /// <summary>
@@ -124,6 +133,71 @@ namespace WebApi.Controllers
             // CachingPipelineBehaviour devreye girecek
             var branches = await _sender.Send(query);
             return Ok(branches);
+        }
+
+        /// <summary>
+        /// Şube yöneticilerini listeler (marka sahibi + BranchAdminMap ile atanmış kullanıcılar).
+        /// </summary>
+        [HttpGet("{branchId:guid}/admins")]
+        [ProducesResponseType(typeof(List<BranchAdminListItemDto>), StatusCodes.Status200OK)]
+        public async Task<IActionResult> GetBranchAdmins(Guid branchId, CancellationToken cancellationToken)
+        {
+            var query = new GetBranchAdminsQuery
+            {
+                BranchId = branchId,
+                ActingUserId = await GetActingDomainUserIdAsync(cancellationToken)
+            };
+            var items = await _sender.Send(query, cancellationToken);
+            return Ok(items);
+        }
+
+        /// <summary>
+        /// Kullanıcıyı bu şubede atanmış yönetici yapar (BranchAdminMap). Marka sahibi atanamaz.
+        /// </summary>
+        [HttpPost("{branchId:guid}/admins")]
+        [ProducesResponseType(StatusCodes.Status204NoContent)]
+        public async Task<IActionResult> AssignBranchAdmin(Guid branchId, [FromBody] AssignBranchAdminRequest body, CancellationToken cancellationToken)
+        {
+            var command = new AssignBranchAdminCommand
+            {
+                BranchId = branchId,
+                UserId = body.UserId,
+                ActingUserId = await GetActingDomainUserIdAsync(cancellationToken)
+            };
+            await _sender.Send(command, cancellationToken);
+            return NoContent();
+        }
+
+        /// <summary>
+        /// Kullanıcının bu şubedeki atanmış yöneticiliğini kaldırır (yalnızca BranchAdminMap kaydı).
+        /// </summary>
+        [HttpDelete("{branchId:guid}/admins/{userId:guid}")]
+        [ProducesResponseType(StatusCodes.Status204NoContent)]
+        public async Task<IActionResult> RemoveBranchAdmin(Guid branchId, Guid userId, CancellationToken cancellationToken)
+        {
+            var command = new RemoveBranchAdminCommand
+            {
+                BranchId = branchId,
+                UserId = userId,
+                ActingUserId = await GetActingDomainUserIdAsync(cancellationToken)
+            };
+            await _sender.Send(command, cancellationToken);
+            return NoContent();
+        }
+
+        private async Task<Guid> GetActingDomainUserIdAsync(CancellationToken cancellationToken)
+        {
+            var identityIdClaim = User.FindFirstValue(OpenIddictConstants.Claims.Subject)
+                ?? User.FindFirstValue(ClaimTypes.NameIdentifier)
+                ?? User.FindFirstValue("sub");
+
+            if (string.IsNullOrEmpty(identityIdClaim) || !Guid.TryParse(identityIdClaim, out var identityId))
+                throw new UnauthorizedAccessException("Geçersiz token. Kullanıcı ID bulunamadı.");
+
+            var user = await _userQueryRepository.GetByIdentityIdAsync(identityId, cancellationToken)
+                ?? throw new UnauthorizedAccessException("Kullanıcı profili bulunamadı.");
+
+            return user.Id;
         }
     }
 }

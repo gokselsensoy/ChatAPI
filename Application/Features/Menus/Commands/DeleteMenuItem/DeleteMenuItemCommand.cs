@@ -4,6 +4,7 @@ namespace Application.Features.Menus.Commands.DeleteMenuItem
 {
     public class DeleteMenuItemCommand : IRequest<bool>
     {
+        public Guid ActingUserId { get; set; }
         public Guid MenuId { get; set; }
         public Guid MenuItemId { get; set; }
     }

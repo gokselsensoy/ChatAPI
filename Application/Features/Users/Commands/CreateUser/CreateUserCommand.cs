@@ -1,5 +1,4 @@
 ﻿using Application.Abstractions.Messaging;
-using Domain.Enums;
 
 namespace Application.Features.Users.Commands.CreateUser
 {
@@ -10,6 +9,5 @@ namespace Application.Features.Users.Commands.CreateUser
         public string Email { get; set; }
         public string FirstName { get; set; }
         public string LastName { get; set; }
-        public UserType UserType { get; set; } = UserType.Customer;
     }
 }

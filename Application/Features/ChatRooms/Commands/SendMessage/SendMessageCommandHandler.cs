@@ -17,19 +17,22 @@ namespace Application.Features.ChatRooms.Commands.SendMessage
         private readonly INotificationService _notificationService;
         private readonly IUserQueryRepository _userQueryRepository; // YENİ (Geo-Lock için)
         private readonly IBlacklistQueryRepository _blacklistQueryRepository;
+        private readonly IBranchQueryRepository _branchQueryRepository;
 
         public SendMessageCommandHandler(
             IUnitOfWork unitOfWork,
             IChatRoomRepository chatRoomRepository,
             INotificationService notificationService,
             IUserQueryRepository userQueryRepository,
-            IBlacklistQueryRepository blacklistQueryRepository) // YENİ
+            IBlacklistQueryRepository blacklistQueryRepository,
+            IBranchQueryRepository branchQueryRepository)
         {
             _unitOfWork = unitOfWork;
             _chatRoomRepository = chatRoomRepository;
             _notificationService = notificationService;
-            _userQueryRepository = userQueryRepository; // YENİ
+            _userQueryRepository = userQueryRepository;
             _blacklistQueryRepository = blacklistQueryRepository;
+            _branchQueryRepository = branchQueryRepository;
         }
 
         public async Task<ChatRoomMessageDto> Handle(SendMessageCommand request, CancellationToken cancellationToken)
@@ -56,7 +59,8 @@ namespace Application.Features.ChatRooms.Commands.SendMessage
             // 3. Kaydet (EF Core yeni eklenen mesajı anlar)
             await _unitOfWork.SaveChangesAsync(cancellationToken);
 
-            // 4. DTO'yu Hazırla (SignalR için)
+            var privileged = await _branchQueryRepository.GetBranchPrivilegedUserIdsAsync(room.BranchId, cancellationToken);
+
             var messageDto = new ChatRoomMessageDto
             {
                 Id = message.Id,
@@ -64,7 +68,8 @@ namespace Application.Features.ChatRooms.Commands.SendMessage
                 SenderUserId = message.SenderUserId,
                 SenderUserName = request.SenderUserName,
                 Message = message.Message,
-                CreatedDate = message.CreatedDate
+                CreatedDate = message.CreatedDate,
+                SenderRole = privileged.Contains(message.SenderUserId) ? "Admin" : "Müşteri"
             };
 
             // 5. SignalR ile Gruba Yayınla

@@ -5,6 +5,7 @@ namespace Application.Features.Menus.Commands.AddMenuItem
 {
     public class AddMenuItemCommand : ICommand<Guid>
     {
+        public Guid ActingUserId { get; set; }
         public Guid MenuId { get; set; }
         public string Name { get; set; }
         public string Description { get; set; }
