@@ -7,6 +7,7 @@ using Application.Features.Menus.Commands.UpdateMenu;
 using Application.Features.Menus.Commands.UpdateMenuItem;
 using Application.Features.Menus.DTOs;
 using Application.Features.Menus.Queries.GetCustomerMenu;
+using Domain.Enums;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -43,6 +44,42 @@ namespace WebApi.Controllers
 
             // 4. Sonucu 200 OK ile dön
             return Ok(menus);
+        }
+
+        /// <summary>
+        /// Menü tiplerini istemciye döner.
+        /// </summary>
+        [HttpGet("menu-types")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        public IActionResult GetMenuTypes()
+        {
+            var items = Enum.GetValues<MenuType>()
+                .Select(x => new
+                {
+                    Value = (int)x,
+                    Name = x.ToString()
+                })
+                .ToList();
+
+            return Ok(items);
+        }
+
+        /// <summary>
+        /// Menü ürün kategori tiplerini istemciye döner.
+        /// </summary>
+        [HttpGet("category-types")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        public IActionResult GetCategoryTypes()
+        {
+            var items = Enum.GetValues<CategoryType>()
+                .Select(x => new
+                {
+                    Value = (int)x,
+                    Name = x.ToString()
+                })
+                .ToList();
+
+            return Ok(items);
         }
 
         [HttpPost]
