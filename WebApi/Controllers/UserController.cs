@@ -152,7 +152,9 @@ namespace WebApi.Controllers
         #region Helper Methods
         private async Task<(Guid UserId, Guid IdentityId)> GetUserIdsFromToken()
         {
-            var identityIdString = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            var identityIdString = User.FindFirstValue(OpenIddictConstants.Claims.Subject)
+                ?? User.FindFirstValue(ClaimTypes.NameIdentifier)
+                ?? User.FindFirstValue("sub");
             if (string.IsNullOrEmpty(identityIdString) || !Guid.TryParse(identityIdString, out var identityId))
             {
                 return (Guid.Empty, Guid.Empty);
