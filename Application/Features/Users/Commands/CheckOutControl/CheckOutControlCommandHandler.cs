@@ -14,16 +14,19 @@ namespace Application.Features.Users.Commands.CheckOutControl
         private readonly IRepository<Branch> _branchRepo;
         private readonly IMediator _mediator;
         private readonly IUserQueryRepository _userQueryRepo;
+        private readonly IBranchQueryRepository _branchQueryRepo;
 
         public CheckOutControlCommandHandler(IRepository<UserLocation> locationRepo,
             IRepository<Branch> branchRepo,
             IMediator mediator,
-            IUserQueryRepository userQueryRepo) 
+            IUserQueryRepository userQueryRepo,
+            IBranchQueryRepository branchQueryRepo) 
         {
             _locationRepo = locationRepo;
             _branchRepo = branchRepo;
             _mediator = mediator;
             _userQueryRepo = userQueryRepo;
+            _branchQueryRepo = branchQueryRepo;
         }
 
         public async Task<bool> Handle(CheckOutControlCommand request, CancellationToken cancellationToken)
@@ -49,6 +52,12 @@ namespace Application.Features.Users.Commands.CheckOutControl
                 // DİKKAT: CheckOutCommand IdentityId beklediği için request.UserId gönderiyoruz!
                 await _mediator.Send(new CheckOutCommand { UserId = request.UserId }, cancellationToken);
                 return true;
+            }
+
+            // Brand owner veya bu şubede admin olan kullanıcılar için konum tabanlı otomatik checkout yapılmaz.
+            if (await _branchQueryRepo.CanUserManageBranchAsync(realUserId, currentLocation.BranchId, cancellationToken))
+            {
+                return false;
             }
 
             var userPoint = new Point((double)request.Longitude, (double)request.Latitude) { SRID = 4326 };

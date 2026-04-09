@@ -17,6 +17,7 @@ namespace Application.Features.ChatRooms.Commands.JoinChatRoom
         private readonly INotificationService _notificationService; // SignalR için
         private readonly IBlacklistQueryRepository _blacklistQueryRepository;
         private readonly IUserLocationQueryRepository _userLocationQueryRepo;
+        private readonly IBranchQueryRepository _branchQueryRepository;
 
         public JoinChatRoomCommandHandler(
             IChatRoomRepository chatRoomRepository, // DEĞİŞTİ
@@ -24,7 +25,8 @@ namespace Application.Features.ChatRooms.Commands.JoinChatRoom
             IUserQueryRepository userQueryRepository, // EKLENDİ
             INotificationService notificationService,
             IBlacklistQueryRepository blacklistQueryRepository,
-            IUserLocationQueryRepository userLocationQueryRepo)
+            IUserLocationQueryRepository userLocationQueryRepo,
+            IBranchQueryRepository branchQueryRepository)
         {
             _chatRoomRepository = chatRoomRepository;
             _unitOfWork = unitOfWork;
@@ -32,6 +34,7 @@ namespace Application.Features.ChatRooms.Commands.JoinChatRoom
             _notificationService = notificationService;
             _blacklistQueryRepository = blacklistQueryRepository;
             _userLocationQueryRepo = userLocationQueryRepo;
+            _branchQueryRepository = branchQueryRepository;
         }
 
         public async Task Handle(JoinChatRoomCommand request, CancellationToken cancellationToken)
@@ -49,10 +52,14 @@ namespace Application.Features.ChatRooms.Commands.JoinChatRoom
             // YENİ EKLENEN KISIM: Kullanıcının anlık konumunu bul
             var currentLocation = await _userLocationQueryRepo.GetAsync(ul => ul.UserId == realUserId, cancellationToken);
             if (currentLocation == null)
-                throw new UnauthorizedAccessException("Bu odaya katılmak için önce bir şubeye check-in yapmalısınız.");
+            {
+                var canManageBranch = await _branchQueryRepository.CanUserManageBranchAsync(realUserId, room.BranchId, cancellationToken);
+                if (!canManageBranch)
+                    throw new UnauthorizedAccessException("Bu odaya katılmak için önce bir şubeye check-in yapmalısınız.");
+            }
 
             // 1. İşlemi Yap (Artık yeni Domain metodumuzu ve DB'den gelen BranchId'yi kullanıyoruz)
-            room.JoinPublicRoom(realUserId, currentLocation.BranchId);
+            room.JoinPublicRoom(realUserId, currentLocation?.BranchId ?? room.BranchId);
 
             await _unitOfWork.SaveChangesAsync(cancellationToken);
 

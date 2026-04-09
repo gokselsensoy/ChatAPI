@@ -130,7 +130,7 @@ try
                         .AddEphemeralSigningKey();
             }
 
-            options.SetAccessTokenLifetime(TimeSpan.FromSeconds(10));
+            //options.SetAccessTokenLifetime(TimeSpan.FromSeconds(10));
 
             options.UseAspNetCore()
                    .EnableTokenEndpointPassthrough();

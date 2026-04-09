@@ -21,6 +21,7 @@ namespace Application.Features.Branchs.Queries.GetNearbyBranches
                 request.Latitude,
                 request.Longitude,
                 request.RadiusInMeters,
+                request.CurrentUserId,
                 request, // Pagination bilgileri burada
                 cancellationToken
             );

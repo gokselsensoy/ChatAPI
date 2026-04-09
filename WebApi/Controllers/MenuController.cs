@@ -40,6 +40,7 @@ namespace WebApi.Controllers
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         public async Task<IActionResult> GetCustomerMenus([FromQuery] GetCustomerMenuQuery query, CancellationToken cancellationToken)
         {
+            query.UserId = await GetActingDomainUserIdAsync(cancellationToken);
             var menus = await _sender.Send(query, cancellationToken);
 
             // 4. Sonucu 200 OK ile dön

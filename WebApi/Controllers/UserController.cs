@@ -56,8 +56,9 @@ namespace WebApi.Controllers
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         public async Task<IActionResult> GetMyProfile()
         {
-            // Token'dan 'sub' claim'ini oku (Bu bizim IdentityId'miz)
-            var identityIdString = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            var identityIdString = User.FindFirstValue(OpenIddictConstants.Claims.Subject)
+                ?? User.FindFirstValue(ClaimTypes.NameIdentifier)
+                ?? User.FindFirstValue("sub");
             if (string.IsNullOrEmpty(identityIdString) || !Guid.TryParse(identityIdString, out var identityId))
             {
                 return Unauthorized("Geçersiz token (IdentityId bulunamadı).");
@@ -73,9 +74,14 @@ namespace WebApi.Controllers
         /// Kullanıcı bir şubeye giriş yapar (Check-In).
         /// </summary>
         [HttpPost("check-in")]
-        public async Task<IActionResult> CheckIn([FromBody] CheckInCommand command)
+        public async Task<IActionResult> CheckIn([FromBody] CheckInCommand command, CancellationToken cancellationToken)
         {
-            await _sender.Send(command);
+            var (userId, _) = await GetUserIdsFromToken();
+            if (userId == Guid.Empty)
+                return Unauthorized("Geçersiz token.");
+
+            command.UserId = userId;
+            await _sender.Send(command, cancellationToken);
             return Ok(new { Message = "Check-in başarılı." });
         }
 
@@ -83,9 +89,14 @@ namespace WebApi.Controllers
         /// Kullanıcı mekandan manuel olarak ayrılır (Check-Out).
         /// </summary>
         [HttpPost("check-out")]
-        public async Task<IActionResult> CheckOut([FromBody] CheckOutCommand command)
+        public async Task<IActionResult> CheckOut([FromBody] CheckOutCommand command, CancellationToken cancellationToken)
         {
-            await _sender.Send(command);
+            var (userId, _) = await GetUserIdsFromToken();
+            if (userId == Guid.Empty)
+                return Unauthorized("Geçersiz token.");
+
+            command.UserId = userId;
+            await _sender.Send(command, cancellationToken);
             return Ok(new { Message = "Çıkış işlemi başarılı." });
         }
 

@@ -10,5 +10,6 @@ namespace Application.Features.Branchs.Queries.GetNearbyBranches
         public decimal Latitude { get; set; }
         public decimal Longitude { get; set; }
         public int RadiusInMeters { get; set; } = 5000; // Varsayılan 5km
+        public Guid? CurrentUserId { get; set; }
     }
 }

@@ -13,7 +13,6 @@ namespace Infrastructure.Persistence.Context
             var configuration = new ConfigurationBuilder()
                 .SetBasePath(webApiPath)
                 .AddJsonFile("appsettings.json", optional: false)
-                .AddEnvironmentVariables()
                 .Build();
 
             var connectionString = configuration.GetConnectionString("DefaultConnection")

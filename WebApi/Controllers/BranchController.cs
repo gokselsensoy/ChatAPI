@@ -128,10 +128,11 @@ namespace WebApi.Controllers
         /// </remarks>
         [HttpGet("nearby")]
         [ProducesResponseType(typeof(List<NearbyBranchDto>), StatusCodes.Status200OK)]
-        public async Task<IActionResult> GetNearby([FromQuery] GetNearbyBranchesQuery query)
+        public async Task<IActionResult> GetNearby([FromQuery] GetNearbyBranchesQuery query, CancellationToken cancellationToken)
         {
+            query.CurrentUserId = await GetActingDomainUserIdAsync(cancellationToken);
             // CachingPipelineBehaviour devreye girecek
-            var branches = await _sender.Send(query);
+            var branches = await _sender.Send(query, cancellationToken);
             return Ok(branches);
         }
 

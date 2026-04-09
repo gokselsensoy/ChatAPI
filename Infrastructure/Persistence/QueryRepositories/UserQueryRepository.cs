@@ -63,6 +63,27 @@ namespace Infrastructure.Persistence.QueryRepositories
                 // userProfile.EmailConfirmed = identityInfo.EmailConfirmed; // DTO'ya eklerseniz
             }
 
+            userProfile.IsAnyBrandOwner = await _context.Brands
+                .AsNoTracking()
+                .AnyAsync(b => b.OwnerUserId == userProfile.Id, cancellationToken);
+
+            userProfile.BranchId = await _context.UserLocations
+                .AsNoTracking()
+                .Where(ul => ul.UserId == userProfile.Id && !ul.IsDeleted)
+                .Select(ul => (Guid?)ul.BranchId)
+                .FirstOrDefaultAsync(cancellationToken);
+
+            if (userProfile.BranchId.HasValue)
+            {
+                var branchId = userProfile.BranchId.Value;
+                userProfile.IsAdminAtCheckedInBranch = await _context.Branches
+                    .AsNoTracking()
+                    .Where(b => b.Id == branchId)
+                    .AnyAsync(b => b.Brand!.OwnerUserId == userProfile.Id
+                        || _context.BranchAdminMaps.Any(m => m.BranchId == branchId && m.UserId == userProfile.Id),
+                        cancellationToken);
+            }
+
             return userProfile;
         }
 

@@ -11,13 +11,16 @@ namespace Application.Features.Menus.Queries.GetCustomerMenu
     {
         private readonly IMenuQueryRepository _menuQueryRepository;
         private readonly IRepository<UserLocation> _userLocationRepository;
+        private readonly IBranchQueryRepository _branchQueryRepository;
 
         public GetCustomerMenuQueryHandler(
             IMenuQueryRepository menuQueryRepository,
-            IRepository<UserLocation> userLocationRepository)
+            IRepository<UserLocation> userLocationRepository,
+            IBranchQueryRepository branchQueryRepository)
         {
             _menuQueryRepository = menuQueryRepository;
             _userLocationRepository = userLocationRepository;
+            _branchQueryRepository = branchQueryRepository;
         }
 
         public async Task<List<MenuDto>> Handle(GetCustomerMenuQuery request, CancellationToken cancellationToken)
@@ -29,7 +32,9 @@ namespace Application.Features.Menus.Queries.GetCustomerMenu
 
             if (userLocation == null || userLocation.BranchId != request.BranchId)
             {
-                throw new UnauthorizedAccessException("Bu şubenin menüsünü görmek için check-in yapmalısınız.");
+                var canManageBranch = await _branchQueryRepository.CanUserManageBranchAsync(request.UserId, request.BranchId, cancellationToken);
+                if (!canManageBranch)
+                    throw new UnauthorizedAccessException("Bu şubenin menüsünü görmek için check-in yapmalısınız.");
             }
 
             // 2. Menüleri ve Ürünleri Getir

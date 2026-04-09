@@ -65,6 +65,7 @@ namespace Infrastructure.Persistence.QueryRepositories
     decimal latitude,
     decimal longitude,
     int distanceInMeters,
+    Guid? currentUserId,
     PaginatedRequest pagination,
     CancellationToken cancellationToken = default)
         {
@@ -72,15 +73,25 @@ namespace Infrastructure.Persistence.QueryRepositories
             var userLocation = new Point((double)longitude, (double)latitude) { SRID = 4326 };
             var random = new Random();
 
+            var skipGeoFilter = false;
+            if (currentUserId.HasValue)
+            {
+                var userId = currentUserId.Value;
+                // Brand owner veya herhangi bir şubede atanmış admin ise mesafe filtresi bypass edilir.
+                skipGeoFilter = await _context.Brands.AsNoTracking().AnyAsync(b => b.OwnerUserId == userId, cancellationToken)
+                    || await _context.BranchAdminMaps.AsNoTracking().AnyAsync(m => m.UserId == userId, cancellationToken);
+            }
+
             // 2. Temel Sorgu (Veritabanında filtreleme)
-            var query = _context.Branches
-                .AsNoTracking()
-                .Where(b => EF.Functions.IsWithinDistance(
-                                b.Address.Location,
-                                userLocation,
-                                distanceInMeters,
-                                true)
-                );
+            var query = _context.Branches.AsNoTracking().AsQueryable();
+            if (!skipGeoFilter)
+            {
+                query = query.Where(b => EF.Functions.IsWithinDistance(
+                                    b.Address.Location,
+                                    userLocation,
+                                    distanceInMeters,
+                                    true));
+            }
 
             // 3. Mesafeye göre sırala
             query = query.OrderBy(b => b.Address.Location.Distance(userLocation));
@@ -197,6 +208,13 @@ namespace Infrastructure.Persistence.QueryRepositories
                 .OrderByDescending(i => i.IsBrandOwner)
                 .ThenBy(i => i.UserName)
                 .ToList();
+        }
+
+        public async Task<bool> IsUserBrandOwnerAsync(Guid userId, CancellationToken cancellationToken = default)
+        {
+            return await _context.Brands
+                .AsNoTracking()
+                .AnyAsync(b => b.OwnerUserId == userId, cancellationToken);
         }
     }
 }

@@ -17,6 +17,7 @@ namespace Application.Abstractions.QueryRepositories
             decimal latitude,
             decimal longitude,
             int distanceInMeters,
+            Guid? currentUserId,
             PaginatedRequest pagination, // Pagination parametresi
             CancellationToken cancellationToken = default);
 
@@ -33,5 +34,7 @@ namespace Application.Abstractions.QueryRepositories
         Task<Guid?> GetBrandOwnerUserIdForBranchAsync(Guid branchId, CancellationToken cancellationToken = default);
 
         Task<List<BranchAdminListItemDto>> GetBranchAdminsAsync(Guid branchId, CancellationToken cancellationToken = default);
+
+        Task<bool> IsUserBrandOwnerAsync(Guid userId, CancellationToken cancellationToken = default);
     }
 }
