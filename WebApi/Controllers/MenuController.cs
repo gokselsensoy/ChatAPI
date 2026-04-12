@@ -6,6 +6,8 @@ using Application.Features.Menus.Commands.DeleteMenuItem;
 using Application.Features.Menus.Commands.UpdateMenu;
 using Application.Features.Menus.Commands.UpdateMenuItem;
 using Application.Features.Menus.DTOs;
+using Application.Features.Menus.Queries.GetBranchAdminMenus;
+using Application.Features.Menus.Queries.GetBrandOwnerMenusGrouped;
 using Application.Features.Menus.Queries.GetCustomerMenu;
 using Domain.Enums;
 using MediatR;
@@ -29,6 +31,41 @@ namespace WebApi.Controllers
         {
             _sender = sender;
             _userQueryRepository = userQueryRepository;
+        }
+
+        /// <summary>
+        /// Marka sahibi: markasına bağlı tüm şubelerin menü ve ürünlerini şube (ve marka adı) bazında gruplanmış döner.
+        /// </summary>
+        [HttpGet("admin/by-brand")]
+        [ProducesResponseType(typeof(List<BranchMenusGroupDto>), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
+        public async Task<IActionResult> GetMenusForBrandOwner(CancellationToken cancellationToken)
+        {
+            var query = new GetBrandOwnerMenusGroupedQuery
+            {
+                ActingUserId = await GetActingDomainUserIdAsync(cancellationToken)
+            };
+            var result = await _sender.Send(query, cancellationToken);
+            return Ok(result);
+        }
+
+        /// <summary>
+        /// Marka sahibi veya atanmış şube yöneticisi: yalnızca ilgili şubenin menü ve ürünleri (tam <see cref="MenuDto"/>).
+        /// </summary>
+        [HttpGet("admin/branches/{branchId:guid}")]
+        [ProducesResponseType(typeof(List<MenuDto>), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
+        public async Task<IActionResult> GetMenusForBranchAdmin(Guid branchId, CancellationToken cancellationToken)
+        {
+            var query = new GetBranchAdminMenusQuery
+            {
+                BranchId = branchId,
+                ActingUserId = await GetActingDomainUserIdAsync(cancellationToken)
+            };
+            var result = await _sender.Send(query, cancellationToken);
+            return Ok(result);
         }
 
         /// <summary>

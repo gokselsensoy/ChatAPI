@@ -10,5 +10,8 @@ namespace Application.Abstractions.QueryRepositories
         Task<UserDto?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default);
         Task<UserDto?> GetByIdentityIdAsync(Guid identityId, CancellationToken cancellationToken = default);
         Task<Dictionary<Guid, Guid?>> GetUserBranchMapAsync(IEnumerable<Guid> userIds, CancellationToken cancellationToken = default);
+
+        /// <summary>Domain User.Id → AspNetUsers/OpenIddict IdentityId (SignalR Clients.User ile uyumlu).</summary>
+        Task<Dictionary<Guid, Guid>> GetIdentityIdsByUserIdsAsync(IEnumerable<Guid> userIds, CancellationToken cancellationToken = default);
     }
 }

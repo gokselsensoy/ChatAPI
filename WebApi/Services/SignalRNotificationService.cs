@@ -23,6 +23,19 @@ namespace WebApi.Services
             await _hubContext.Clients.Group(groupName).SendAsync(methodName, payload);
         }
 
+        public async Task SendChatRoomMessageToMembersAsync(
+            string methodName,
+            object payloadForOthers,
+            object payloadForSender,
+            string senderIdentityId,
+            IReadOnlyList<string> otherMemberIdentityIds)
+        {
+            if (otherMemberIdentityIds.Count > 0)
+                await _hubContext.Clients.Users(otherMemberIdentityIds).SendAsync(methodName, payloadForOthers);
+
+            await _hubContext.Clients.User(senderIdentityId).SendAsync(methodName, payloadForSender);
+        }
+
         public async Task SendNotificationToUserAsync(string userId, string methodName, object payload)
         {
             await _hubContext.Clients.Group(userId).SendAsync(methodName, payload);

@@ -108,5 +108,20 @@ namespace Infrastructure.Persistence.QueryRepositories
 
             return result;
         }
+
+        public async Task<Dictionary<Guid, Guid>> GetIdentityIdsByUserIdsAsync(IEnumerable<Guid> userIds, CancellationToken cancellationToken = default)
+        {
+            var list = userIds.Distinct().ToList();
+            if (list.Count == 0)
+                return new Dictionary<Guid, Guid>();
+
+            var rows = await _context.Set<User>()
+                .AsNoTracking()
+                .Where(u => list.Contains(u.Id))
+                .Select(u => new { u.Id, u.IdentityId })
+                .ToListAsync(cancellationToken);
+
+            return rows.ToDictionary(x => x.Id, x => x.IdentityId);
+        }
     }
 }

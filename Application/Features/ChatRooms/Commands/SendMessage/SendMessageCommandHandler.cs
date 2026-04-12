@@ -60,8 +60,9 @@ namespace Application.Features.ChatRooms.Commands.SendMessage
             await _unitOfWork.SaveChangesAsync(cancellationToken);
 
             var privileged = await _branchQueryRepository.GetBranchPrivilegedUserIdsAsync(room.BranchId, cancellationToken);
+            var senderRole = privileged.Contains(message.SenderUserId) ? "Admin" : "Müşteri";
 
-            var messageDto = new ChatRoomMessageDto
+            var dtoForOthers = new ChatRoomMessageDto
             {
                 Id = message.Id,
                 ChatRoomId = message.ChatRoomId,
@@ -69,18 +70,43 @@ namespace Application.Features.ChatRooms.Commands.SendMessage
                 SenderUserName = request.SenderUserName,
                 Message = message.Message,
                 CreatedDate = message.CreatedDate,
-                SenderRole = privileged.Contains(message.SenderUserId) ? "Admin" : "Müşteri"
+                SenderRole = senderRole,
+                IsMine = false
             };
 
-            // 5. SignalR ile Gruba Yayınla
-            var groupName = $"chatroom:{request.RoomId}";
-            await _notificationService.SendNotificationToGroupAsync(
-                groupName,
-                "ReceiveMessage",
-                messageDto
-            );
+            var dtoForSender = new ChatRoomMessageDto
+            {
+                Id = message.Id,
+                ChatRoomId = message.ChatRoomId,
+                SenderUserId = message.SenderUserId,
+                SenderUserName = request.SenderUserName,
+                Message = message.Message,
+                CreatedDate = message.CreatedDate,
+                SenderRole = senderRole,
+                IsMine = true
+            };
 
-            return messageDto;
+            var memberUserIds = room.ChatRoomUserMaps.Select(m => m.UserId).ToList();
+            var identityByUserId = await _userQueryRepository.GetIdentityIdsByUserIdsAsync(memberUserIds, cancellationToken);
+
+            if (!identityByUserId.TryGetValue(request.SenderUserId, out var senderIdentityId))
+                throw new InvalidOperationException("Mesaj gönderen kullanıcının kimlik eşlemesi bulunamadı.");
+
+            var otherIdentityIds = memberUserIds
+                .Where(id => id != request.SenderUserId)
+                .Select(id => identityByUserId.TryGetValue(id, out var iid) ? iid.ToString() : null)
+                .Where(s => s != null)
+                .Cast<string>()
+                .ToList();
+
+            await _notificationService.SendChatRoomMessageToMembersAsync(
+                "ReceiveMessage",
+                dtoForOthers,
+                dtoForSender,
+                senderIdentityId.ToString(),
+                otherIdentityIds);
+
+            return dtoForSender;
         }
 
         // (Bu metot idealde 'IChatAuthorizationService'e taşınır)
