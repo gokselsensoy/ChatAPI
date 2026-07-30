@@ -5,6 +5,7 @@ using Application.Features.ChatRooms.Commands.LeaveChatRoom;
 using Application.Features.ChatRooms.Commands.SendMessage;
 using Application.Features.ChatRooms.DTOs;
 using Application.Features.ChatRooms.Queries.GetChatRoomMessages;
+using Application.Features.ChatRooms.Queries.GetPrivateInbox;
 using Application.Features.ChatRooms.Queries.GetPublicRoomsByBranch;
 using Application.Features.Users.DTOs;
 using Application.Features.Users.Queries.GetMyProfile;
@@ -31,13 +32,30 @@ namespace WebApi.Controllers
         }
 
         /// <summary>
-        /// Kullanıcının o an check-in yaptığı şubedeki PUBLIC odaları listeler.
+        /// Kullanıcının o an check-in yaptığı şubedeki PUBLIC odaları listeler (son mesaj / hasNew dahil).
         /// </summary>
         [HttpGet("public")]
         [ProducesResponseType(typeof(List<ChatRoomDto>), StatusCodes.Status200OK)]
-        public async Task<IActionResult> GetPublicRoomsForMyBranch([FromQuery] GetPublicRoomsByBranchQuery query)
+        public async Task<IActionResult> GetPublicRoomsForMyBranch(CancellationToken cancellationToken)
         {
-            var rooms = await _sender.Send(query);
+            var user = await GetMyProfileDto();
+            if (user == null) return Unauthorized();
+
+            var rooms = await _sender.Send(new GetPublicRoomsByBranchQuery { UserId = user.Id }, cancellationToken);
+            return Ok(rooms);
+        }
+
+        /// <summary>
+        /// Kullanıcının üye olduğu Private / Group odaları (inbox) listeler.
+        /// </summary>
+        [HttpGet("private-inbox")]
+        [ProducesResponseType(typeof(List<ChatRoomDto>), StatusCodes.Status200OK)]
+        public async Task<IActionResult> GetPrivateInbox(CancellationToken cancellationToken)
+        {
+            var user = await GetMyProfileDto();
+            if (user == null) return Unauthorized();
+
+            var rooms = await _sender.Send(new GetPrivateInboxQuery { UserId = user.Id }, cancellationToken);
             return Ok(rooms);
         }
 
@@ -45,7 +63,6 @@ namespace WebApi.Controllers
         /// O anki şubede yeni bir chat odası oluşturur. (Genelde admin yetkisi gerektirir)
         /// </summary>
         [HttpPost]
-        // [Authorize(Roles = "Admin")] // TODO: Yetkilendirme eklenecek
         [ProducesResponseType(typeof(Guid), StatusCodes.Status201Created)]
         public async Task<IActionResult> CreateRoom([FromBody] CreateChatRoomCommand command)
         {
@@ -94,7 +111,7 @@ namespace WebApi.Controllers
         }
 
         /// <summary>
-        /// Bir odadaki mesajları sayfalı olarak listeler (Cache'lenmez).
+        /// Bir odadaki mesajları sayfalı olarak listeler. Okundu işaretler.
         /// </summary>
         [HttpGet("messages/{roomId:guid}")]
         [ProducesResponseType(typeof(PaginatedResponse<ChatRoomMessageDto>), StatusCodes.Status200OK)]
@@ -125,12 +142,11 @@ namespace WebApi.Controllers
                 RoomId = roomId,
                 Message = request.Message,
                 SenderUserId = user.Id,
-                SenderUserName = user.UserName // DTO için
+                SenderUserName = user.UserName
             };
 
             var messageDto = await _sender.Send(command);
 
-            // DTO'yu 201 Created ile geri dön
             return CreatedAtAction(nameof(GetMessages), new { roomId = roomId }, messageDto);
         }
 
@@ -152,12 +168,11 @@ namespace WebApi.Controllers
             return CreatedAtAction(nameof(GetMessages), new { roomId = roomId }, new { id = roomId });
         }
 
-        // --- Yardımcı Metot ---
         private async Task<UserDto?> GetMyProfileDto()
         {
-            // Önce OpenIddict standardı olan "sub" aranır, yedeği olarak NameIdentifier'a bakılır
             var identityIdString = User.FindFirstValue(OpenIddictConstants.Claims.Subject)
-                                ?? User.FindFirstValue(ClaimTypes.NameIdentifier);
+                                ?? User.FindFirstValue(ClaimTypes.NameIdentifier)
+                                ?? User.FindFirstValue("sub");
 
             if (string.IsNullOrEmpty(identityIdString) || !Guid.TryParse(identityIdString, out var identityId))
             {
@@ -175,7 +190,6 @@ namespace WebApi.Controllers
         }
     }
 
-    // SendMessage için basit request DTO
     public class SendMessageRequest
     {
         public string Message { get; set; }

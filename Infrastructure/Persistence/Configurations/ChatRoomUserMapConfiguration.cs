@@ -12,6 +12,8 @@ namespace Infrastructure.Persistence.Configurations
             // (ChatRoomId, UserId) composite key olmalı
             builder.HasKey(m => new { m.ChatRoomId, m.UserId });
 
+            builder.Property(m => m.LastReadAt);
+
             builder.HasOne(m => m.ChatRoom)
                 .WithMany(cr => cr.ChatRoomUserMaps) // ChatRoom.cs'te tanımlı
                 .HasForeignKey(m => m.ChatRoomId)

@@ -5,6 +5,7 @@ using Application.Shared.Pagination;
 using Domain.Entities;
 using Domain.Enums;
 using Domain.Repositories;
+using Domain.SeedWork;
 using MediatR;
 using Microsoft.AspNetCore.Http;
 using System.Security.Claims;
@@ -16,16 +17,21 @@ namespace Application.Features.ChatRooms.Queries.GetChatRoomMessages
         private readonly IChatRoomRepository _chatRoomRepository;
         private readonly IChatRoomQueryRepository _queryRepository;
         private readonly IUserQueryRepository _userQueryRepository;
+        private readonly IUnitOfWork _unitOfWork;
         private readonly IHttpContextAccessor _httpContextAccessor;
         private readonly Guid _currentIdentityId;
-        public GetChatMessagesQueryHandler(IChatRoomRepository chatRoomRepository, 
-            IChatRoomQueryRepository queryRepository, 
+
+        public GetChatMessagesQueryHandler(
+            IChatRoomRepository chatRoomRepository,
+            IChatRoomQueryRepository queryRepository,
             IUserQueryRepository userQueryRepository,
+            IUnitOfWork unitOfWork,
             IHttpContextAccessor httpContextAccessor)
         {
             _chatRoomRepository = chatRoomRepository;
             _queryRepository = queryRepository;
             _userQueryRepository = userQueryRepository;
+            _unitOfWork = unitOfWork;
             _httpContextAccessor = httpContextAccessor;
 
             var userIdClaim = _httpContextAccessor.HttpContext?.User?.FindFirst(ClaimTypes.NameIdentifier)?.Value
@@ -57,22 +63,15 @@ namespace Application.Features.ChatRooms.Queries.GetChatRoomMessages
             if (room == null)
                 throw new NotFoundException(nameof(ChatRoom), request.RoomId);
 
-            // KURAL 2 (GEO-LOCK)
-            if (room.RoomType == RoomType.Private)
+            if (room.RoomType == RoomType.Private || room.RoomType == RoomType.Group)
             {
-                // Kullanıcının o anki şubesini al
-                var currentUser = await _userQueryRepository.GetByIdAsync(currentLocalUserId, cancellationToken);
-
-                // 1. Kullanıcı o odanın üyesi mi?
                 if (!room.ChatRoomUserMaps.Any(m => m.UserId == currentLocalUserId))
-                    throw new Exception("Bu özel odayı görme yetkiniz yok.");
-
-                // 2. Kural: Konuşmaya devam etmek için o mekanda olunmalı
-                await CheckGeoLockAsync(room, room.BranchId);
+                    throw new UnauthorizedAccessException("Bu özel odayı görme yetkiniz yok.");
             }
 
-            // KURAL 6 (2 SAAT LİMİTİ)
-            // Kuralları geçtiyse mesajları getir
+            await _chatRoomRepository.MarkAsReadAsync(request.RoomId, currentLocalUserId, cancellationToken);
+            await _unitOfWork.SaveChangesAsync(cancellationToken);
+
             return await _queryRepository.GetMessagesForRoomAsync(
                 request.RoomId,
                 room.BranchId,
@@ -81,27 +80,6 @@ namespace Application.Features.ChatRooms.Queries.GetChatRoomMessages
                 currentLocalUserId,
                 cancellationToken
             );
-        }
-
-        private async Task CheckGeoLockAsync(ChatRoom room, Guid requiredBranchId)
-        {
-            var memberUserIds = room.ChatRoomUserMaps.Select(m => m.UserId);
-            var userBranchMap = await _userQueryRepository.GetUserBranchMapAsync(memberUserIds);
-
-            // O şubede (check-in yapmış) olan üyelerin sayısı
-            var membersAtBranch = userBranchMap
-                .Count(pair => pair.Value.HasValue && pair.Value.Value == requiredBranchId);
-
-            if (room.ChatRoomUserMaps.Count <= 2) // 1-e-1 Chat
-            {
-                if (membersAtBranch < 2)
-                    throw new Exception("Bu özel sohbete devam etmek için her iki kullanıcının da mekanda olması gerekir.");
-            }
-            else // Grup Chat'i
-            {
-                if (membersAtBranch < 2)
-                    throw new Exception("Bu grup sohbetine devam etmek için en az 2 üyenin mekanda olması gerekir.");
-            }
         }
     }
 }

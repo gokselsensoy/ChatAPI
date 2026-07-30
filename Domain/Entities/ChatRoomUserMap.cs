@@ -7,6 +7,7 @@ namespace Domain.Entities
         public Guid ChatRoomId { get; private set; }
         public Guid UserId { get; private set; }
         public DateTime JoinedAt { get; private set; }
+        public DateTime? LastReadAt { get; private set; }
 
         // Navigations
         public ChatRoom? ChatRoom { get; private set; }
@@ -16,13 +17,20 @@ namespace Domain.Entities
 
         public static ChatRoomUserMap Create(Guid chatRoomId, Guid userId)
         {
+            var now = DateTime.UtcNow;
             return new ChatRoomUserMap
             {
                 Id = Guid.NewGuid(),
                 ChatRoomId = chatRoomId,
                 UserId = userId,
-                JoinedAt = DateTime.UtcNow
+                JoinedAt = now,
+                LastReadAt = now
             };
+        }
+
+        public void MarkAsRead()
+        {
+            LastReadAt = DateTime.UtcNow;
         }
     }
 }

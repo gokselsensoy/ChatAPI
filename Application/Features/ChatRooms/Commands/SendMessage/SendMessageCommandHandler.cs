@@ -13,32 +13,36 @@ namespace Application.Features.ChatRooms.Commands.SendMessage
     public class SendMessageCommandHandler : IRequestHandler<SendMessageCommand, ChatRoomMessageDto>
     {
         private readonly IUnitOfWork _unitOfWork;
-        private readonly IChatRoomRepository _chatRoomRepository; // DEĞİŞTİ
+        private readonly IChatRoomRepository _chatRoomRepository;
         private readonly INotificationService _notificationService;
-        private readonly IUserQueryRepository _userQueryRepository; // YENİ (Geo-Lock için)
+        private readonly IPushNotificationService _pushNotificationService;
+        private readonly IUserQueryRepository _userQueryRepository;
         private readonly IBlacklistQueryRepository _blacklistQueryRepository;
         private readonly IBranchQueryRepository _branchQueryRepository;
+        private readonly IUserDeviceTokenRepository _deviceTokenRepository;
 
         public SendMessageCommandHandler(
             IUnitOfWork unitOfWork,
             IChatRoomRepository chatRoomRepository,
             INotificationService notificationService,
+            IPushNotificationService pushNotificationService,
             IUserQueryRepository userQueryRepository,
             IBlacklistQueryRepository blacklistQueryRepository,
-            IBranchQueryRepository branchQueryRepository)
+            IBranchQueryRepository branchQueryRepository,
+            IUserDeviceTokenRepository deviceTokenRepository)
         {
             _unitOfWork = unitOfWork;
             _chatRoomRepository = chatRoomRepository;
             _notificationService = notificationService;
+            _pushNotificationService = pushNotificationService;
             _userQueryRepository = userQueryRepository;
             _blacklistQueryRepository = blacklistQueryRepository;
             _branchQueryRepository = branchQueryRepository;
+            _deviceTokenRepository = deviceTokenRepository;
         }
 
         public async Task<ChatRoomMessageDto> Handle(SendMessageCommand request, CancellationToken cancellationToken)
         {
-            // 1. Odayı üye listesiyle birlikte bul
-            // (Mesajları include etmeye gerek yok, sadece üye kontrolü lazım)
             var room = await _chatRoomRepository.GetByIdWithUsersAsync(request.RoomId, cancellationToken);
             if (room == null)
                 throw new NotFoundException(nameof(ChatRoom), request.RoomId);
@@ -47,22 +51,19 @@ namespace Application.Features.ChatRooms.Commands.SendMessage
             if (isBanned)
                 throw new UnauthorizedAccessException("Bu şubede mesaj göndermeniz engellenmiştir.");
 
-            // 2. KURAL 2 (GEO-LOCK)
-            if (room.RoomType == RoomType.Private || room.RoomType == RoomType.Group)
+            if (room.RoomType == RoomType.Group)
             {
-                await CheckGeoLockAsync(room, room.BranchId); // (GetMessages'taki yardımcı metot)
+                await CheckGeoLockAsync(room, room.BranchId);
             }
 
-            // 2. Domain Metodunu Çağır (İş kuralı kontrolü ve mesaj oluşturma)
             var message = room.AddMessage(request.SenderUserId, request.Message);
 
-            // 3. Kaydet (EF Core yeni eklenen mesajı anlar)
             await _unitOfWork.SaveChangesAsync(cancellationToken);
 
             var privileged = await _branchQueryRepository.GetBranchPrivilegedUserIdsAsync(room.BranchId, cancellationToken);
             var senderRole = privileged.Contains(message.SenderUserId) ? "Admin" : "Müşteri";
 
-            var dtoForOthers = new ChatRoomMessageDto
+            var messageDto = new ChatRoomMessageDto
             {
                 Id = message.Id,
                 ChatRoomId = message.ChatRoomId,
@@ -74,42 +75,68 @@ namespace Application.Features.ChatRooms.Commands.SendMessage
                 IsMine = false
             };
 
-            var dtoForSender = new ChatRoomMessageDto
+            var previewText = TruncatePreview(message.Message);
+            var preview = new ChatRoomPreviewDto
             {
-                Id = message.Id,
-                ChatRoomId = message.ChatRoomId,
+                RoomId = room.Id,
+                RoomType = room.RoomType.ToString(),
+                BranchId = room.BranchId,
+                LastMessagePreview = previewText,
+                LastMessageAt = message.CreatedDate,
                 SenderUserId = message.SenderUserId,
-                SenderUserName = request.SenderUserName,
-                Message = message.Message,
-                CreatedDate = message.CreatedDate,
-                SenderRole = senderRole,
-                IsMine = true
+                HasNew = true
             };
 
-            var memberUserIds = room.ChatRoomUserMaps.Select(m => m.UserId).ToList();
-            var identityByUserId = await _userQueryRepository.GetIdentityIdsByUserIdsAsync(memberUserIds, cancellationToken);
-
-            if (!identityByUserId.TryGetValue(request.SenderUserId, out var senderIdentityId))
-                throw new InvalidOperationException("Mesaj gönderen kullanıcının kimlik eşlemesi bulunamadı.");
-
-            var otherIdentityIds = memberUserIds
-                .Where(id => id != request.SenderUserId)
-                .Select(id => identityByUserId.TryGetValue(id, out var iid) ? iid.ToString() : null)
-                .Where(s => s != null)
-                .Cast<string>()
-                .ToList();
-
-            await _notificationService.SendChatRoomMessageToMembersAsync(
+            await _notificationService.SendNotificationToGroupAsync(
+                $"chatroom:{room.Id}",
                 "ReceiveMessage",
-                dtoForOthers,
-                dtoForSender,
-                senderIdentityId.ToString(),
-                otherIdentityIds);
+                messageDto);
 
-            return dtoForSender;
+            if (room.RoomType == RoomType.Public)
+            {
+                await _notificationService.SendNotificationToGroupAsync(
+                    $"branch:{room.BranchId}",
+                    "BranchRoomPreviewUpdated",
+                    preview);
+            }
+            else
+            {
+                var memberUserIds = room.ChatRoomUserMaps.Select(m => m.UserId).ToList();
+                var identityByUserId = await _userQueryRepository.GetIdentityIdsByUserIdsAsync(memberUserIds, cancellationToken);
+                var identityIds = identityByUserId.Values.Select(id => id.ToString()).ToList();
+
+                await _notificationService.SendNotificationToUsersAsync(
+                    identityIds,
+                    "PrivateInboxUpdated",
+                    preview);
+
+                // OS push: Private/Group — gönderen hariç (app kapalı/arka plan)
+                var recipientUserIds = memberUserIds.Where(id => id != request.SenderUserId).ToList();
+                var tokens = await _deviceTokenRepository.GetActiveTokensByUserIdsAsync(recipientUserIds, cancellationToken);
+                if (tokens.Count > 0)
+                {
+                    await _pushNotificationService.SendToTokensAsync(
+                        tokens,
+                        new PushMessage
+                        {
+                            Title = request.SenderUserName,
+                            Body = previewText ?? "Yeni mesaj",
+                            Data = new Dictionary<string, string>
+                            {
+                                ["type"] = "private_message",
+                                ["roomId"] = room.Id.ToString(),
+                                ["roomType"] = room.RoomType.ToString(),
+                                ["senderUserId"] = request.SenderUserId.ToString()
+                            }
+                        },
+                        cancellationToken);
+                }
+            }
+
+            messageDto.IsMine = true;
+            return messageDto;
         }
 
-        // (Bu metot idealde 'IChatAuthorizationService'e taşınır)
         private async Task CheckGeoLockAsync(ChatRoom room, Guid requiredBranchId)
         {
             var memberUserIds = room.ChatRoomUserMaps.Select(m => m.UserId);
@@ -118,16 +145,17 @@ namespace Application.Features.ChatRooms.Commands.SendMessage
             var membersAtBranch = userBranchMap
                 .Count(pair => pair.Value.HasValue && pair.Value.Value == requiredBranchId);
 
-            if (room.ChatRoomUserMaps.Count <= 2 && room.RoomType == RoomType.Private) // 1-e-1 Chat
-            {
-                if (membersAtBranch < 2)
-                    throw new Exception("Bu özel sohbete devam etmek için her iki kullanıcının da mekanda olması gerekir.");
-            }
-            else // Grup Chat'i
-            {
-                if (membersAtBranch < 2 && room.RoomType == RoomType.Group)
-                    throw new Exception("Bu grup sohbetine devam etmek için en az 2 üyenin mekanda olması gerekir.");
-            }
+            if (membersAtBranch < 2 && room.RoomType == RoomType.Group)
+                throw new Exception("Bu grup sohbetine devam etmek için en az 2 üyenin mekanda olması gerekir.");
+        }
+
+        private static string? TruncatePreview(string? message)
+        {
+            if (string.IsNullOrWhiteSpace(message))
+                return null;
+
+            const int maxLen = 120;
+            return message.Length <= maxLen ? message : message[..maxLen] + "...";
         }
     }
 }

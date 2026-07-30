@@ -25,14 +25,118 @@ namespace Infrastructure.Persistence.QueryRepositories
             _branchQueryRepository = branchQueryRepository;
         }
 
-        public async Task<List<ChatRoomDto>> GetPublicRoomsByBranchIdAsync(Guid branchId, CancellationToken cancellationToken = default)
+        public async Task<List<ChatRoomDto>> GetPublicRoomsByBranchIdAsync(
+            Guid branchId,
+            Guid currentUserId,
+            CancellationToken cancellationToken = default)
         {
-            return await _context.ChatRooms
+            var rooms = await _context.ChatRooms
                 .AsNoTracking()
-                .Where(cr => cr.BranchId == branchId && cr.RoomType == RoomType.Public)
+                .Where(cr => cr.BranchId == branchId && cr.RoomType == RoomType.Public && !cr.IsDeleted)
                 .OrderBy(cr => cr.Name)
-                .ProjectTo<ChatRoomDto>(_mapper.ConfigurationProvider, cancellationToken)
+                .Select(cr => new
+                {
+                    Room = cr,
+                    MemberCount = cr.ChatRoomUserMaps.Count,
+                    LastMessage = cr.Messages
+                        .Where(m => m.CreatedDate >= DateTime.UtcNow.AddHours(-2))
+                        .OrderByDescending(m => m.CreatedDate)
+                        .Select(m => new { m.Message, m.CreatedDate, m.SenderUserId })
+                        .FirstOrDefault(),
+                    LastReadAt = cr.ChatRoomUserMaps
+                        .Where(m => m.UserId == currentUserId)
+                        .Select(m => m.LastReadAt)
+                        .FirstOrDefault(),
+                    UnreadCount = cr.ChatRoomUserMaps.Any(m => m.UserId == currentUserId)
+                        ? cr.Messages.Count(msg =>
+                            msg.CreatedDate >= DateTime.UtcNow.AddHours(-2)
+                            && msg.CreatedDate > (cr.ChatRoomUserMaps
+                                .Where(m => m.UserId == currentUserId)
+                                .Select(m => m.LastReadAt)
+                                .FirstOrDefault() ?? DateTime.MinValue)
+                            && msg.SenderUserId != currentUserId)
+                        : cr.Messages.Count(msg =>
+                            msg.CreatedDate >= DateTime.UtcNow.AddHours(-2)
+                            && msg.SenderUserId != currentUserId)
+                })
                 .ToListAsync(cancellationToken);
+
+            return rooms.Select(x =>
+            {
+                var lastAt = x.LastMessage?.CreatedDate;
+                var lastRead = x.LastReadAt;
+                var hasNew = lastAt.HasValue && (!lastRead.HasValue || lastAt > lastRead);
+
+                return new ChatRoomDto
+                {
+                    Id = x.Room.Id,
+                    Name = x.Room.Name,
+                    RoomType = x.Room.RoomType.ToString(),
+                    BranchId = x.Room.BranchId,
+                    MemberCount = x.MemberCount,
+                    LastMessagePreview = TruncatePreview(x.LastMessage?.Message),
+                    LastMessageAt = lastAt,
+                    LastMessageSenderUserId = x.LastMessage?.SenderUserId,
+                    HasNew = hasNew,
+                    UnreadCount = x.UnreadCount
+                };
+            }).ToList();
+        }
+
+        public async Task<List<ChatRoomDto>> GetPrivateInboxAsync(
+            Guid userId,
+            CancellationToken cancellationToken = default)
+        {
+            var rooms = await _context.ChatRooms
+                .AsNoTracking()
+                .Where(cr =>
+                    !cr.IsDeleted
+                    && (cr.RoomType == RoomType.Private || cr.RoomType == RoomType.Group)
+                    && cr.ChatRoomUserMaps.Any(m => m.UserId == userId))
+                .Select(cr => new
+                {
+                    Room = cr,
+                    MemberCount = cr.ChatRoomUserMaps.Count,
+                    LastMessage = cr.Messages
+                        .OrderByDescending(m => m.CreatedDate)
+                        .Select(m => new { m.Message, m.CreatedDate, m.SenderUserId })
+                        .FirstOrDefault(),
+                    LastReadAt = cr.ChatRoomUserMaps
+                        .Where(m => m.UserId == userId)
+                        .Select(m => m.LastReadAt)
+                        .FirstOrDefault(),
+                    UnreadCount = cr.Messages.Count(msg =>
+                        msg.SenderUserId != userId
+                        && msg.CreatedDate > (cr.ChatRoomUserMaps
+                            .Where(m => m.UserId == userId)
+                            .Select(m => m.LastReadAt)
+                            .FirstOrDefault() ?? DateTime.MinValue))
+                })
+                .ToListAsync(cancellationToken);
+
+            return rooms
+                .Select(x =>
+                {
+                    var lastAt = x.LastMessage?.CreatedDate;
+                    var lastRead = x.LastReadAt;
+                    var hasNew = lastAt.HasValue && (!lastRead.HasValue || lastAt > lastRead);
+
+                    return new ChatRoomDto
+                    {
+                        Id = x.Room.Id,
+                        Name = x.Room.Name,
+                        RoomType = x.Room.RoomType.ToString(),
+                        BranchId = x.Room.BranchId,
+                        MemberCount = x.MemberCount,
+                        LastMessagePreview = TruncatePreview(x.LastMessage?.Message),
+                        LastMessageAt = lastAt,
+                        LastMessageSenderUserId = x.LastMessage?.SenderUserId,
+                        HasNew = hasNew,
+                        UnreadCount = x.UnreadCount
+                    };
+                })
+                .OrderByDescending(r => r.LastMessageAt ?? DateTime.MinValue)
+                .ToList();
         }
 
         public async Task<PaginatedResponse<ChatRoomMessageDto>> GetMessagesForRoomAsync(
@@ -69,6 +173,15 @@ namespace Infrastructure.Persistence.QueryRepositories
             }
 
             return new PaginatedResponse<ChatRoomMessageDto>(items, count, pagination.PageNumber, pagination.PageSize);
+        }
+
+        private static string? TruncatePreview(string? message)
+        {
+            if (string.IsNullOrWhiteSpace(message))
+                return null;
+
+            const int maxLen = 120;
+            return message.Length <= maxLen ? message : message[..maxLen] + "...";
         }
     }
 }

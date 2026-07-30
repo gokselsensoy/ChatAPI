@@ -10,7 +10,12 @@ namespace Application.Mappings
         {
             CreateMap<ChatRoom, ChatRoomDto>()
                 .ForMember(dest => dest.MemberCount,
-                           opt => opt.MapFrom(src => src.ChatRoomUserMaps.Count));
+                           opt => opt.MapFrom(src => src.ChatRoomUserMaps.Count))
+                .ForMember(dest => dest.LastMessagePreview, opt => opt.Ignore())
+                .ForMember(dest => dest.LastMessageAt, opt => opt.Ignore())
+                .ForMember(dest => dest.LastMessageSenderUserId, opt => opt.Ignore())
+                .ForMember(dest => dest.HasNew, opt => opt.Ignore())
+                .ForMember(dest => dest.UnreadCount, opt => opt.Ignore());
         }
     }
 }

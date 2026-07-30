@@ -1,4 +1,5 @@
 ﻿using Application.Abstractions.Services;
+using Application.Options;
 using Integration.Services;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -11,13 +12,11 @@ namespace Integration.DependencyInjection
             this IServiceCollection services,
             IConfiguration configuration)
         {
-            // GoogleDrive servisini (ve gelecekteki diğerlerini) kaydet
+            services.Configure<FirebaseOptions>(configuration.GetSection(FirebaseOptions.SectionName));
+
             services.AddTransient<IPhotoUploader, GoogleDrivePhotoUploader>();
+            services.AddSingleton<IPushNotificationService, FcmPushNotificationService>();
 
-            // Buraya Stripe servisi, Email servisi (SendGrid) vb. eklenecek
-            // services.AddTransient<IEmailService, SendGridEmailService>();
-
-            // HttpClientFactory ayarlarını da burada yapabilirsin
             services.AddHttpClient<GoogleDrivePhotoUploader>(client =>
             {
                 // client.BaseAddress = new Uri(configuration["GoogleApiSettings:BaseUrl"]);

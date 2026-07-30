@@ -35,5 +35,16 @@ namespace Infrastructure.Persistence.Repositories
                     r.ChatRoomUserMaps.Any(m => m.UserId == userId)) // Kullanıcının içinde olduğu odalar
                 .ToListAsync(cancellationToken);
         }
+
+        public async Task MarkAsReadAsync(Guid roomId, Guid userId, CancellationToken cancellationToken = default)
+        {
+            var map = await _context.Set<ChatRoomUserMap>()
+                .FirstOrDefaultAsync(m => m.ChatRoomId == roomId && m.UserId == userId, cancellationToken);
+
+            if (map == null)
+                return;
+
+            map.MarkAsRead();
+        }
     }
 }

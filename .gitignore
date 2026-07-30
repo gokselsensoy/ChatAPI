@@ -416,3 +416,12 @@ FodyWeavers.xsd
 *.msix
 *.msm
 *.msp
+
+# Local mobile/backend notes (not for repo / deploy)
+MOBILE_*.md
+GUIDE_*.md
+docs/*.md
+
+# Firebase service account — satır başındaki # kaldırarak ignore aç
+**/firebase-service-account.json
+**/firebase-adminsdk*.json

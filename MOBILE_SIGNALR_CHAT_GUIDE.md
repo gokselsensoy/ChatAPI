@@ -1,58 +1,64 @@
-# Mobil Rehber: SignalR ile Anlik Mesajlasma (`/chathub`)
+# Mobil Rehber: SignalR Chat Ayrımı (`/chathub`)
 
-Bu rehber, mobil ekip icin chat tarafindaki SignalR kullanimini netlestirmek icin hazirlandi.
+Bu rehber, branch sohbet listesi ile private inbox'ın **ayrı abonelik katmanlarıyla** nasıl kullanıldığını anlatır.  
+Amaç: her odaya SignalR join etmeden son mesaj / yeni mesaj göstermek; açık sohbette anlık full mesaj almak.
 
 ---
 
-## 1) Mimari Ozet
+## 1) Mimari (3 katman)
 
-Chat akisinda iki kanal birlikte kullanilir:
+| Katman | Ne zaman | SignalR grup | Event |
+|--------|----------|--------------|-------|
+| Kişisel kanal | Hub connect | `identityId` (otomatik) | `PrivateInboxUpdated` |
+| Branch kanalı | Branch chat listesi açıkken | `branch:{branchId}` | `BranchRoomPreviewUpdated` |
+| Oda kanalı | Sadece oda ekranı açıkken | `chatroom:{roomId}` | `ReceiveMessage` |
 
-- **HTTP API**  
-  Odaya katilma/ayrilma, mesaj gonderme, gecmis mesaj cekme gibi isler.
-- **SignalR Hub (`/chathub`)**  
-  Anlik event alma (mesaj geldi, biri katildi, biri ayrildi, ban bildirimi vb).
+**Ayrı hub yok.** Tek hub: `/chathub`. Ayrım grup + event tipiyle yapılır.
 
-Bu sayede kullanici mesaji gonderdikten sonra diger kullanicilar sayfa yenilemeden mesaji gorur.
+```
+Login → Hub connect (kişisel kanal)
+  ├─ Branch chat listesi → JoinBranchChannel(branchId)
+  │     └─ BranchRoomPreviewUpdated (hafif)
+  ├─ Private tab → sadece PrivateInboxUpdated dinle (join gerekmez)
+  └─ Belirli oda aç → JoinRoomGroup(roomId)
+        └─ ReceiveMessage (full)
+```
 
 ---
 
 ## 2) Hub baglantisi
 
-Hub endpoint:
-- `/chathub`
-
-Auth:
-- Access token gereklidir.
-- Query string ile token gonderebilirsiniz: `?access_token=...`
-
-Onerilen mobil akisi:
-1. Login (`/connect/token`)
-2. Hub baglantisi ac
-3. Chat ekranina girince ilgili odaya hub grubundan join ol
-4. Ekrandan cikinca gruptan ayril
+- Endpoint: `/chathub`
+- Auth: `Authorization: Bearer <token>` veya `?access_token=...`
+- Connect olunca kişisel grup otomatik eklenir (JWT `sub` / `NameIdentifier`).
 
 ---
 
-## 3) Hub methodlari (client -> server)
+## 3) Hub methodlari (client → server)
 
-### `JoinRoomGroup(roomId: string)`
-- Chat ekrani acildiginda cagir.
-- Server artik oda erisimini kontrol eder:
-  - Ozel/grup odada uye degilsen join edemezsin.
-  - Public odada check-in veya ilgili sube admin/owner yetkisi gerekir.
+### `JoinBranchChannel(branchId)`
+- Branch public sohbet **listesi** açılınca çağır.
+- Check-in (aynı branch) veya branch admin/owner gerekir.
+- Her public odaya `JoinRoomGroup` **atma**.
 
-### `LeaveRoomGroup(roomId: string)`
-- Chat ekranindan cikarken cagir.
+### `LeaveBranchChannel(branchId)`
+- Liste kapanınca / check-out / başka branch'e geçince çağır.
+
+### `JoinRoomGroup(roomId)`
+- **Sadece** sohbet ekranı açılınca çağır.
+- Private/Group: üye olmalısın.
+- Public: check-in veya admin/owner.
+
+### `LeaveRoomGroup(roomId)`
+- Sohbet ekranından çıkınca çağır.
 
 ---
 
-## 4) Dinlenecek eventler (server -> client)
+## 4) Dinlenecek eventler (server → client)
 
-### `ReceiveMessage`
-Yeni mesaj geldiginde tetiklenir.
+### `ReceiveMessage` (açık oda)
+Sadece `chatroom:{roomId}` grubuna gider.
 
-Ornek payload:
 ```json
 {
   "id": "guid",
@@ -60,74 +66,116 @@ Ornek payload:
   "senderUserId": "guid",
   "senderUserName": "kullanici",
   "message": "Merhaba",
-  "createdDate": "2026-04-08T20:10:11Z",
+  "createdDate": "2026-07-30T13:00:00Z",
   "isMine": false,
   "senderRole": "Admin"
 }
 ```
 
-### `UserJoined`
-Bir kullanici odaya katildiginda tetiklenir.
+> Gönderen HTTP `201` response ile de mesajı alır. Hub grubundaysa `ReceiveMessage` da gelebilir → `message.id` ile duplicate engelle.
 
-### `UserLeft`
-Bir kullanici odadan ayrildiginda tetiklenir.
+### `BranchRoomPreviewUpdated` (branch liste)
+Public odada yeni mesaj olunca `branch:{branchId}` grubuna gider. Full mesaj değil:
 
-### `BannedFromBranch`
-Kullanici bulundugu subeden banlandiginda kendi user grubuna gelir.
+```json
+{
+  "roomId": "guid",
+  "roomType": "Public",
+  "branchId": "guid",
+  "lastMessagePreview": "Merhaba...",
+  "lastMessageAt": "2026-07-30T13:00:00Z",
+  "senderUserId": "guid",
+  "hasNew": true
+}
+```
 
----
+Liste satırındaki son mesaj + badge'i güncelle.
 
-## 5) HTTP endpointlerle beraber kullanim
+### `PrivateInboxUpdated` (private / group inbox)
+Private veya Group mesajında üyelere (kişisel kanal) gider. Aynı hafif payload; `roomType` = `Private` | `Group`.
 
-### Odaya giris
-1. `POST /api/chatrooms/join/{roomId}`
-2. Basariliysa `JoinRoomGroup(roomId)` cagir
+Private tab listesini güncelle. Branch listesine karıştırma.
 
-### Odaya mesaj gonderme
-1. `POST /api/chatrooms/messages/{roomId}`
-2. Server mesaji kaydeder
-3. Ayni anda SignalR ile `ReceiveMessage` yayini yapar
-
-> Not: Gonderen client hem HTTP response alir hem de (gruptaysa) `ReceiveMessage` eventi alabilir.  
-> Uygulamada duplicate'i engellemek icin `message.id` ile uniq kontrol yapin.
-
-### Odadan cikis
-1. `POST /api/chatrooms/leave/{roomId}`
-2. `LeaveRoomGroup(roomId)`
-
----
-
-## 6) Hata senaryolari ve oneriler
-
-- `JoinRoomGroup` hatasi:
-  - Odaya yetkin olmayabilir.
-  - Room id gecersiz olabilir.
-  - Token suresi dolmus olabilir.
-
-Onerilen davranis:
-- Hub baglanti hatalarinda token yenile + reconnect dene.
-- `401/403` benzeri durumda kullaniciyi chat listesine geri yonlendir.
-- Room eventleri icin local state'i idempotent guncelle (aynı event tekrar gelebilir).
+### Diğer
+- `UserJoined` / `UserLeft` → `chatroom:{roomId}` (oda açıkken anlamlı)
+- `BannedFromBranch` → kişisel kanal
 
 ---
 
-## 7) Mobil taraf icin kisa checklist
+## 5) HTTP endpointler
 
-- [ ] Login sonrasi hub baglantisi aciliyor mu?
-- [ ] Chat ekraninda `JoinRoomGroup` cagriliyor mu?
-- [ ] Chat ekranindan cikarken `LeaveRoomGroup` cagriliyor mu?
-- [ ] `ReceiveMessage` eventinde liste anlik guncelleniyor mu?
-- [ ] Duplicate mesaj kontrolu (`message.id`) var mi?
-- [ ] Reconnect sonrasi aktif oda gruplarina tekrar join oluyor mu?
+### Branch public odalar (önizlemeli)
+`GET /api/chatrooms/public`
+
+Token'dan user çözülür; check-in branch'inin public odaları +:
+- `lastMessagePreview`, `lastMessageAt`, `lastMessageSenderUserId`
+- `hasNew`, `unreadCount`
+
+### Private inbox
+`GET /api/chatrooms/private-inbox`
+
+Üye olunan Private + Group odalar, son mesaja göre sıralı, aynı önizleme alanları.
+
+### Mesaj geçmişi (okundu işaretler)
+`GET /api/chatrooms/messages/{roomId}`
+
+Odayı açınca çağır; `LastReadAt` güncellenir → `hasNew` temizlenir.
+
+### Mesaj gönder
+`POST /api/chatrooms/messages/{roomId}` body: `{ "message": "..." }`
+
+Server:
+1. DB kaydı
+2. `ReceiveMessage` → `chatroom:{id}` (sadece oda ekranı açık olanlar)
+3. Public ise `BranchRoomPreviewUpdated` → `branch:{branchId}`
+4. Private/Group ise `PrivateInboxUpdated` → üyelerin kişisel kanalları
+
+### Private geo-lock
+Private sohbet **lokasyondan bağımsız** devam eder (ileride premium bayrağı eklenebilir).  
+Group için geo-lock hâlâ geçerlidir.
 
 ---
 
-## 8) Bilinen davranislar
+## 6) Önerilen mobil ekran akışları
 
-- Hub tarafinda room group join'i artik yetki kontrollu.
-- Admin/owner kullanicilar ilgili kurallara gore bazi geo-kisitlari bypass edebilir.
-- Public odalarda yetkisiz kullanici sadece roomId bilerek gruba dinleyici olarak giremez.
+### Branch chat listesi
+1. `GET /api/chatrooms/public`
+2. `JoinBranchChannel(branchId)`
+3. `BranchRoomPreviewUpdated` dinle → liste satırını güncelle
+4. Bir odaya tıkla → sohbet ekranı
+
+### Private inbox
+1. `GET /api/chatrooms/private-inbox`
+2. `PrivateInboxUpdated` dinle (hub zaten connect)
+3. Odaya tıkla → sohbet ekranı
+
+### Sohbet ekranı
+1. (Public ise) gerekirse `POST .../join/{roomId}`
+2. `JoinRoomGroup(roomId)`
+3. `GET .../messages/{roomId}`
+4. `ReceiveMessage` dinle
+5. Çıkışta `LeaveRoomGroup(roomId)`
+
+### Branch'ten ayrılınca
+1. `LeaveBranchChannel(branchId)`
+2. Açık oda varsa `LeaveRoomGroup`
 
 ---
 
-Istersen sonraki adimda React Native ve Flutter icin hazir SignalR baglanti kodu orneklerini de ekleyebilirim.
+## 7) Checklist
+
+- [ ] Connect sonrası kişisel kanal çalışıyor mu?
+- [ ] Branch listesinde **sadece** `JoinBranchChannel` var mı? (her odaya join yok)
+- [ ] Private inbox için gereksiz branch/room join yok mu?
+- [ ] Oda açıkken `JoinRoomGroup` + `ReceiveMessage`?
+- [ ] `message.id` ile duplicate engeli?
+- [ ] Reconnect sonrası aktif branch/room join yenileniyor mu?
+- [ ] Public list / private-inbox HTTP alanları parse ediliyor mu?
+
+---
+
+## 8) Neden böyle?
+
+- Liste için 10 odaya SignalR join = gereksiz yük.
+- Private full mesajın branch listesine gitmesi = yanlış kanal.
+- Hafif preview event + HTTP ilk yükleme = badge/son mesaj için yeterli; full stream sadece açık odada.

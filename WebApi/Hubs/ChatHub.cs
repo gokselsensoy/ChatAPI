@@ -1,10 +1,10 @@
-﻿using Microsoft.AspNetCore.Authorization;
+﻿using Application.Abstractions.QueryRepositories;
 using Application.Features.Users.DTOs;
-using Microsoft.AspNetCore.SignalR;
-using Application.Abstractions.QueryRepositories;
 using Domain.Entities;
 using Domain.Enums;
 using Domain.Repositories;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.SignalR;
 using System.Security.Claims;
 
 namespace WebApi.Hubs
@@ -29,11 +29,9 @@ namespace WebApi.Hubs
             _branchQueryRepository = branchQueryRepository;
         }
 
-        // Kullanıcı uygulama açıldığında otomatik bağlanır.
         public override async Task OnConnectedAsync()
         {
-            // Token'dan User ID'yi alıp kendi özel grubuna ekleyelim.
-            // Böylece "SendNotificationToUserAsync" çalışır.
+            // Kişisel kanal: PrivateInboxUpdated buraya gelir (identity id = JWT sub/NameIdentifier)
             var userId = Context.User?.FindFirst(ClaimTypes.NameIdentifier)?.Value
                       ?? Context.User?.FindFirst("sub")?.Value;
 
@@ -45,9 +43,33 @@ namespace WebApi.Hubs
             await base.OnConnectedAsync();
         }
 
-        // --- EKSİK OLAN PARÇA BURASI ---
+        /// <summary>
+        /// Branch chat listesi açıkken çağır. Her odaya join etmeden BranchRoomPreviewUpdated almak için.
+        /// </summary>
+        public async Task JoinBranchChannel(string branchId)
+        {
+            if (!Guid.TryParse(branchId, out var branchGuid))
+                throw new HubException("Geçersiz branchId.");
 
-        // Mobil uygulama Chat ekranını açtığı an bu metodu çağırmalı!
+            var currentUser = await GetCurrentUserAsync();
+            if (currentUser == null)
+                throw new HubException("Kullanıcı doğrulanamadı.");
+
+            var canJoin = await CanJoinBranchChannelAsync(currentUser.Id, branchGuid);
+            if (!canJoin)
+                throw new HubException("Bu şube kanalına katılma yetkiniz yok. Check-in yapın veya yönetici olun.");
+
+            await Groups.AddToGroupAsync(Context.ConnectionId, $"branch:{branchId}");
+        }
+
+        public async Task LeaveBranchChannel(string branchId)
+        {
+            await Groups.RemoveFromGroupAsync(Context.ConnectionId, $"branch:{branchId}");
+        }
+
+        /// <summary>
+        /// Sadece açık sohbet ekranında çağır. ReceiveMessage buraya akar.
+        /// </summary>
         public async Task JoinRoomGroup(string roomId)
         {
             if (!Guid.TryParse(roomId, out var roomGuid))
@@ -65,15 +87,12 @@ namespace WebApi.Hubs
             if (!canJoin)
                 throw new HubException("Bu odaya katılma yetkiniz yok.");
 
-            var groupName = $"chatroom:{roomId}";
-            await Groups.AddToGroupAsync(Context.ConnectionId, groupName);
+            await Groups.AddToGroupAsync(Context.ConnectionId, $"chatroom:{roomId}");
         }
 
-        // Mobil uygulama Chat ekranından çıktığı an (Geri tuşu) bu metodu çağırmalı!
         public async Task LeaveRoomGroup(string roomId)
         {
-            var groupName = $"chatroom:{roomId}";
-            await Groups.RemoveFromGroupAsync(Context.ConnectionId, groupName);
+            await Groups.RemoveFromGroupAsync(Context.ConnectionId, $"chatroom:{roomId}");
         }
 
         private async Task<UserDto?> GetCurrentUserAsync()
@@ -85,6 +104,15 @@ namespace WebApi.Hubs
                 return null;
 
             return await _userQueryRepository.GetByIdentityIdAsync(identityId, Context.ConnectionAborted);
+        }
+
+        private async Task<bool> CanJoinBranchChannelAsync(Guid userId, Guid branchId)
+        {
+            var location = await _userLocationQueryRepository.GetActiveLocationByUserIdAsync(userId, Context.ConnectionAborted);
+            if (location != null && location.BranchId == branchId)
+                return true;
+
+            return await _branchQueryRepository.CanUserManageBranchAsync(userId, branchId, Context.ConnectionAborted);
         }
 
         private async Task<bool> CanCurrentUserJoinRoomAsync(Guid userId, ChatRoom room)
