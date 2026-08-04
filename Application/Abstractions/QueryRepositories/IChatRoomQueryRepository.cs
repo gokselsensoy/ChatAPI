@@ -24,6 +24,10 @@ namespace Application.Abstractions.QueryRepositories
             IEnumerable<Guid> roomIds,
             CancellationToken cancellationToken = default);
 
+        Task<List<ChatRoomMemberDto>> GetMembersForRoomAsync(
+            Guid roomId,
+            CancellationToken cancellationToken = default);
+
         Task<PaginatedResponse<ChatRoomMessageDto>> GetMessagesForRoomAsync(
             Guid roomId,
             Guid branchId,

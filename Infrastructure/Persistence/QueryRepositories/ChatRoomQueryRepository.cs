@@ -117,6 +117,24 @@ namespace Infrastructure.Persistence.QueryRepositories
                 .ToDictionary(g => g.Key, g => g.Select(x => x.UserId).ToList());
         }
 
+        public async Task<List<ChatRoomMemberDto>> GetMembersForRoomAsync(
+            Guid roomId,
+            CancellationToken cancellationToken = default)
+        {
+            return await _context.Set<Domain.Entities.ChatRoomUserMap>()
+                .AsNoTracking()
+                .Where(m => m.ChatRoomId == roomId)
+                .Select(m => new ChatRoomMemberDto
+                {
+                    UserId = m.UserId,
+                    UserName = m.User!.UserName,
+                    FileId = m.User.FileId,
+                    LastSeenAt = m.User.LastSeenAt,
+                    JoinedAt = m.JoinedAt
+                })
+                .ToListAsync(cancellationToken);
+        }
+
         private async Task<List<ChatRoomDto>> GetMemberInboxAsync(
             Guid userId,
             RoomType roomType,

@@ -4,6 +4,7 @@ using Application.Features.ChatRooms.Commands.JoinChatRoom;
 using Application.Features.ChatRooms.Commands.LeaveChatRoom;
 using Application.Features.ChatRooms.Commands.SendMessage;
 using Application.Features.ChatRooms.DTOs;
+using Application.Features.ChatRooms.Queries.GetChatRoomMembers;
 using Application.Features.ChatRooms.Queries.GetChatRoomMessages;
 using Application.Features.ChatRooms.Queries.GetGroupInbox;
 using Application.Features.ChatRooms.Queries.GetPrivateInbox;
@@ -92,6 +93,25 @@ namespace WebApi.Controllers
 
             var roomId = await _sender.Send(command);
             return CreatedAtAction(nameof(GetMessages), new { roomId = roomId }, new { id = roomId });
+        }
+
+        /// <summary>
+        /// Oda üyeleri — isOnline (hub) + lastSeenAt. Private / Group / Public.
+        /// </summary>
+        [HttpGet("{roomId:guid}/members")]
+        [ProducesResponseType(typeof(List<ChatRoomMemberDto>), StatusCodes.Status200OK)]
+        public async Task<IActionResult> GetMembers(Guid roomId, CancellationToken cancellationToken)
+        {
+            var user = await GetMyProfileDto();
+            if (user == null) return Unauthorized();
+
+            var members = await _sender.Send(new GetChatRoomMembersQuery
+            {
+                RoomId = roomId,
+                RequestingUserId = user.Id
+            }, cancellationToken);
+
+            return Ok(members);
         }
 
         [HttpPost("join/{roomId:guid}")]
