@@ -9,7 +9,7 @@ namespace Domain.Entities
         public string Name { get; private set; }
         public RoomType RoomType { get; private set; }
         public Guid BranchId { get; private set; }
-            
+
         // Navigations
         public Branch? Branch { get; private set; }
         public ICollection<ChatRoomMessage> Messages { get; private set; } = new List<ChatRoomMessage>();
@@ -36,8 +36,6 @@ namespace Domain.Entities
                 RoomType = roomType
             };
 
-            // event fırlatılabilir: chatRoom.AddDomainEvent(new ChatRoomCreatedDomainEvent(...));
-
             return chatRoom;
         }
 
@@ -48,8 +46,8 @@ namespace Domain.Entities
 
             Name = newName;
             RoomType = newRoomType;
-            // event fırlatılabilir
         }
+
         public void JoinPublicRoom(Guid userId, Guid userCurrentBranchId)
         {
             if (BranchId != userCurrentBranchId)
@@ -61,7 +59,6 @@ namespace Domain.Entities
             AddUserInternal(userId);
         }
 
-        // 2. Özel odalara davetle veya grubu kurarken katılma
         public void JoinViaInvite(Guid userId, Guid userCurrentBranchId)
         {
             if (BranchId != userCurrentBranchId)
@@ -70,21 +67,15 @@ namespace Domain.Entities
             AddUserInternal(userId);
         }
 
-        // Kod tekrarını önlemek için private yardımcı metot
         private void AddUserInternal(Guid userId)
         {
             if (ChatRoomUserMaps.Any(m => m.UserId == userId))
-                return; // Zaten odadaysa hiçbir şey yapma
+                return;
 
             var map = ChatRoomUserMap.Create(Id, userId);
             ChatRoomUserMaps.Add(map);
-
-            // AddDomainEvent(new UserJoinedRoomEvent(Id, userId));
         }
 
-        /// <summary>
-        /// Bir kullanıcıyı odadan çıkarır (Leave).
-        /// </summary>
         public void RemoveUser(Guid userId)
         {
             var map = ChatRoomUserMaps.FirstOrDefault(m => m.UserId == userId);
@@ -92,13 +83,8 @@ namespace Domain.Entities
                 return;
 
             ChatRoomUserMaps.Remove(map);
-
-            // event fırlatılabilir: AddDomainEvent(new UserLeftRoomEvent(Id, userId));
         }
 
-        /// <summary>
-        /// Odayı 'silindi' olarak işaretler.
-        /// </summary>
         public void SetDeletedPrivateAndGroup()
         {
             if (RoomType == RoomType.Public)
@@ -108,18 +94,12 @@ namespace Domain.Entities
             UpdatedDate = DateTime.UtcNow;
         }
 
-        /// <summary>
-        /// Odayı 'silindi' olarak işaretler.
-        /// </summary>
         public void SetDeleted()
         {
             IsDeleted = true;
             UpdatedDate = DateTime.UtcNow;
         }
 
-        /// <summary>
-        /// Odaya yeni bir mesaj ekler.
-        /// </summary>
         public ChatRoomMessage AddMessage(Guid senderUserId, string message)
         {
             if (!ChatRoomUserMaps.Any(m => m.UserId == senderUserId))
@@ -127,9 +107,15 @@ namespace Domain.Entities
 
             var chatMessage = ChatRoomMessage.Create(Id, senderUserId, message);
             Messages.Add(chatMessage);
-
-            // Not: Mesaj objesini geri döndürüyoruz ki Handler onu SignalR'a yollasın
             return chatMessage;
         }
+
+        /// <summary>Private veya Group — üyelik zorunlu.</summary>
+        public bool IsMemberOnlyRoom =>
+            RoomType is RoomType.Private or RoomType.Group;
+
+        /// <summary>Public + Group check-in ister; Private geo'suz.</summary>
+        public bool RequiresCheckInForMessaging =>
+            RoomType is RoomType.Public or RoomType.Group;
     }
 }

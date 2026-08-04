@@ -22,5 +22,12 @@ namespace Infrastructure.Persistence.Repositories
                      (inv.InviterUserId == inviteeUserId && inv.InviteeUserId == inviterUserId)),
                     cancellationToken);
         }
+
+        public async Task<ChatRoomInvite?> GetByIdWithRoomAsync(Guid id, CancellationToken cancellationToken = default)
+        {
+            return await _context.ChatRoomInvites
+                .Include(i => i.ChatRoom)
+                .FirstOrDefaultAsync(i => i.Id == id, cancellationToken);
+        }
     }
 }

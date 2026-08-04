@@ -11,6 +11,7 @@ namespace Domain.Entities
         public string FirstName { get; private set; }
         public string LastName { get; private set; }
         public string? FileId { get; private set; }
+        public DateTime? LastSeenAt { get; private set; }
 
         public ICollection<ChatRoomMessage> SentMessages { get; private set; } = new List<ChatRoomMessage>();
         public ICollection<ChatRoomUserMap> ChatRoomMaps { get; private set; } = new List<ChatRoomUserMap>();
@@ -52,6 +53,12 @@ namespace Domain.Entities
             FileId = fileId;
 
             AddDomainEvent(new UserProfileUpdatedDomainEvent(Id, IdentityId, userName));
+        }
+
+        public void TouchLastSeen()
+        {
+            LastSeenAt = DateTime.UtcNow;
+            UpdatedDate = DateTime.UtcNow;
         }
     }
 }

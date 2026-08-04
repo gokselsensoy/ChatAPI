@@ -15,6 +15,15 @@ namespace Application.Abstractions.QueryRepositories
             Guid userId,
             CancellationToken cancellationToken = default);
 
+        Task<List<ChatRoomDto>> GetGroupInboxAsync(
+            Guid userId,
+            CancellationToken cancellationToken = default);
+
+        /// <summary>Odadaki üye userId listesi (presence sayımı için).</summary>
+        Task<Dictionary<Guid, List<Guid>>> GetMemberUserIdsByRoomIdsAsync(
+            IEnumerable<Guid> roomIds,
+            CancellationToken cancellationToken = default);
+
         Task<PaginatedResponse<ChatRoomMessageDto>> GetMessagesForRoomAsync(
             Guid roomId,
             Guid branchId,

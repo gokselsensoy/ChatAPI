@@ -59,7 +59,7 @@ namespace Application.Features.Blacklists.Commands.BanUser
             {
                 room.RemoveUser(request.UserId);
 
-                if (room.RoomType == RoomType.Private && !room.ChatRoomUserMaps.Any())
+                if (room.IsMemberOnlyRoom && !room.ChatRoomUserMaps.Any())
                     room.SetDeleted();
 
                 await _notificationService.SendNotificationToGroupAsync(
@@ -71,11 +71,13 @@ namespace Application.Features.Blacklists.Commands.BanUser
 
             await _unitOfWork.SaveChangesAsync(cancellationToken);
 
-            await _notificationService.SendNotificationToUserAsync(
-                request.UserId.ToString(),
-                "BannedFromBranch",
-                new { BranchId = request.BranchId, Reason = request.Reason }
-            );
+            if (user != null)
+            {
+                await _notificationService.SendNotificationToUserAsync(
+                    user.IdentityId.ToString(),
+                    "BannedFromBranch",
+                    new { BranchId = request.BranchId, Reason = request.Reason });
+            }
 
             return true;
         }

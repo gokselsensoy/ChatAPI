@@ -1,4 +1,5 @@
 ﻿using Domain.Entities;
+using Domain.Enums;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
@@ -12,8 +13,13 @@ namespace Infrastructure.Persistence.Configurations
             builder.HasKey(i => i.Id);
 
             builder.Property(i => i.Status)
-                .HasConversion<string>() // Enum'ı string olarak tut
+                .HasConversion<string>()
                 .HasMaxLength(50);
+
+            builder.Property(i => i.TargetRoomType)
+                .HasConversion<string>()
+                .HasMaxLength(50)
+                .HasDefaultValue(RoomType.Private);
 
             // İlişki 1: Davet hangi ODA için?
             builder.HasOne(i => i.ChatRoom)

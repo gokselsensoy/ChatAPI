@@ -15,7 +15,13 @@ namespace Application.Mappings
                 .ForMember(dest => dest.LastMessageAt, opt => opt.Ignore())
                 .ForMember(dest => dest.LastMessageSenderUserId, opt => opt.Ignore())
                 .ForMember(dest => dest.HasNew, opt => opt.Ignore())
-                .ForMember(dest => dest.UnreadCount, opt => opt.Ignore());
+                .ForMember(dest => dest.UnreadCount, opt => opt.Ignore())
+                .ForMember(dest => dest.PeerUserId, opt => opt.Ignore())
+                .ForMember(dest => dest.PeerUserName, opt => opt.Ignore())
+                .ForMember(dest => dest.PeerFileId, opt => opt.Ignore())
+                .ForMember(dest => dest.IsOnline, opt => opt.Ignore())
+                .ForMember(dest => dest.LastSeenAt, opt => opt.Ignore())
+                .ForMember(dest => dest.OnlineMemberCount, opt => opt.Ignore());
         }
     }
 }

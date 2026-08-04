@@ -12,5 +12,7 @@ namespace Application.Features.ChatRooms.DTOs
         public DateTime? LastMessageAt { get; set; }
         public Guid? SenderUserId { get; set; }
         public bool HasNew { get; set; } = true;
+        public int UnreadCount { get; set; } = 1;
+        public Guid? PeerUserId { get; set; }
     }
 }

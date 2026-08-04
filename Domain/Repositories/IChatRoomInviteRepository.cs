@@ -9,5 +9,7 @@ namespace Domain.Repositories
             Guid inviterUserId,
             Guid inviteeUserId,
             CancellationToken cancellationToken = default);
+
+        Task<ChatRoomInvite?> GetByIdWithRoomAsync(Guid id, CancellationToken cancellationToken = default);
     }
 }

@@ -29,38 +29,30 @@ namespace Application.Features.ChatRooms.Commands.CreateGroupRoom
 
         public async Task<Guid> Handle(CreateGroupRoomCommand request, CancellationToken cancellationToken)
         {
-            // 1. Yeni Private ChatRoom oluştur
             var newGroupRoom = ChatRoom.Create(
                 request.Name,
                 request.BranchId,
-                RoomType.Group
-                //request.CreatorUserId
-            );
+                RoomType.Group);
+
             _chatRoomRepository.Add(newGroupRoom);
 
-            // 2. Davet edilen üyeleri ekle (Kurucu da dahil edilmeli)
-            var allMemberIds = request.UserIds.Union(new[] { request.CreatorUserId }).Distinct();
-
-            // (İdeal olarak, tüm üyelerin o şubede olup olmadığı kontrol edilmeli)
-            // (Şimdilik bu kontrolü atlıyoruz)
+            var allMemberIds = request.UserIds.Union(new[] { request.CreatorUserId }).Distinct().ToList();
 
             foreach (var userId in allMemberIds)
-            {
-                // İdealde burada da her üyenin currentLocation'u çekilip kontrol edilmeli.
-                // Şimdilik bypass için odanın kendi BranchId'sini veriyoruz ki Domain patlamasın.
                 newGroupRoom.JoinViaInvite(userId, request.BranchId);
-            }
 
             await _unitOfWork.SaveChangesAsync(cancellationToken);
 
-            // 3. SignalR ile tüm üyelere "Yeni gruba eklendiniz" bildirimi yolla
+            var identityMap = await _userQueryRepository.GetIdentityIdsByUserIdsAsync(allMemberIds, cancellationToken);
             foreach (var userId in allMemberIds)
             {
+                if (!identityMap.TryGetValue(userId, out var identityId))
+                    continue;
+
                 await _notificationService.SendNotificationToUserAsync(
-                    userId.ToString(),
+                    identityId.ToString(),
                     "AddedToGroup",
-                    new { RoomId = newGroupRoom.Id, RoomName = newGroupRoom.Name }
-                );
+                    new { RoomId = newGroupRoom.Id, RoomName = newGroupRoom.Name, RoomType = RoomType.Group.ToString() });
             }
 
             return newGroupRoom.Id;

@@ -13,5 +13,15 @@
         public Guid? LastMessageSenderUserId { get; set; }
         public bool HasNew { get; set; }
         public int UnreadCount { get; set; }
+
+        /// <summary>Private 1:1 için karşı taraf. Group/Public'te null olabilir.</summary>
+        public Guid? PeerUserId { get; set; }
+        public string? PeerUserName { get; set; }
+        public string? PeerFileId { get; set; }
+        public bool? IsOnline { get; set; }
+        public DateTime? LastSeenAt { get; set; }
+
+        /// <summary>Group / Public: o anda hub'a bağlı üye sayısı (LastSeen değil).</summary>
+        public int OnlineMemberCount { get; set; }
     }
 }

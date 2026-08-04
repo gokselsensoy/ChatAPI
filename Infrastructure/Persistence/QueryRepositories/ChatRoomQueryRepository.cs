@@ -38,6 +38,7 @@ namespace Infrastructure.Persistence.QueryRepositories
                 {
                     Room = cr,
                     MemberCount = cr.ChatRoomUserMaps.Count,
+                    MemberUserIds = cr.ChatRoomUserMaps.Select(m => m.UserId).ToList(),
                     LastMessage = cr.Messages
                         .Where(m => m.CreatedDate >= DateTime.UtcNow.AddHours(-2))
                         .OrderByDescending(m => m.CreatedDate)
@@ -83,15 +84,50 @@ namespace Infrastructure.Persistence.QueryRepositories
             }).ToList();
         }
 
-        public async Task<List<ChatRoomDto>> GetPrivateInboxAsync(
+        public Task<List<ChatRoomDto>> GetPrivateInboxAsync(
             Guid userId,
             CancellationToken cancellationToken = default)
+        {
+            return GetMemberInboxAsync(userId, RoomType.Private, includePeer: true, cancellationToken);
+        }
+
+        public Task<List<ChatRoomDto>> GetGroupInboxAsync(
+            Guid userId,
+            CancellationToken cancellationToken = default)
+        {
+            return GetMemberInboxAsync(userId, RoomType.Group, includePeer: false, cancellationToken);
+        }
+
+        public async Task<Dictionary<Guid, List<Guid>>> GetMemberUserIdsByRoomIdsAsync(
+            IEnumerable<Guid> roomIds,
+            CancellationToken cancellationToken = default)
+        {
+            var ids = roomIds.Distinct().ToList();
+            if (ids.Count == 0)
+                return new Dictionary<Guid, List<Guid>>();
+
+            var rows = await _context.Set<Domain.Entities.ChatRoomUserMap>()
+                .AsNoTracking()
+                .Where(m => ids.Contains(m.ChatRoomId))
+                .Select(m => new { m.ChatRoomId, m.UserId })
+                .ToListAsync(cancellationToken);
+
+            return rows
+                .GroupBy(r => r.ChatRoomId)
+                .ToDictionary(g => g.Key, g => g.Select(x => x.UserId).ToList());
+        }
+
+        private async Task<List<ChatRoomDto>> GetMemberInboxAsync(
+            Guid userId,
+            RoomType roomType,
+            bool includePeer,
+            CancellationToken cancellationToken)
         {
             var rooms = await _context.ChatRooms
                 .AsNoTracking()
                 .Where(cr =>
                     !cr.IsDeleted
-                    && (cr.RoomType == RoomType.Private || cr.RoomType == RoomType.Group)
+                    && cr.RoomType == roomType
                     && cr.ChatRoomUserMaps.Any(m => m.UserId == userId))
                 .Select(cr => new
                 {
@@ -110,7 +146,19 @@ namespace Infrastructure.Persistence.QueryRepositories
                         && msg.CreatedDate > (cr.ChatRoomUserMaps
                             .Where(m => m.UserId == userId)
                             .Select(m => m.LastReadAt)
-                            .FirstOrDefault() ?? DateTime.MinValue))
+                            .FirstOrDefault() ?? DateTime.MinValue)),
+                    Peer = includePeer
+                        ? cr.ChatRoomUserMaps
+                            .Where(m => m.UserId != userId)
+                            .Select(m => new
+                            {
+                                m.UserId,
+                                m.User!.UserName,
+                                m.User.FileId,
+                                m.User.LastSeenAt
+                            })
+                            .FirstOrDefault()
+                        : null
                 })
                 .ToListAsync(cancellationToken);
 
@@ -132,7 +180,11 @@ namespace Infrastructure.Persistence.QueryRepositories
                         LastMessageAt = lastAt,
                         LastMessageSenderUserId = x.LastMessage?.SenderUserId,
                         HasNew = hasNew,
-                        UnreadCount = x.UnreadCount
+                        UnreadCount = x.UnreadCount,
+                        PeerUserId = x.Peer?.UserId,
+                        PeerUserName = x.Peer?.UserName,
+                        PeerFileId = x.Peer?.FileId,
+                        LastSeenAt = x.Peer?.LastSeenAt
                     };
                 })
                 .OrderByDescending(r => r.LastMessageAt ?? DateTime.MinValue)
@@ -152,9 +204,7 @@ namespace Infrastructure.Persistence.QueryRepositories
                             .Where(m => m.ChatRoomId == roomId);
 
             if (roomType == RoomType.Public)
-            {
                 query = query.Where(m => m.CreatedDate >= DateTime.UtcNow.AddHours(-2));
-            }
 
             var count = await query.CountAsync(cancellationToken);
             var items = await query

@@ -40,7 +40,7 @@ namespace Application.Features.ChatRooms.Commands.LeaveChatRoom
             // 2. Silme İşlemi
             room.RemoveUser(request.UserId);
 
-            if (room.RoomType == RoomType.Private && !room.ChatRoomUserMaps.Any())
+            if (room.IsMemberOnlyRoom && !room.ChatRoomUserMaps.Any())
             {
                 room.SetDeleted();
             }

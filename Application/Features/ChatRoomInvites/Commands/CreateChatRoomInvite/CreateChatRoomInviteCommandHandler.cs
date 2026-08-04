@@ -1,6 +1,7 @@
 ﻿using Application.Abstractions.QueryRepositories;
 using Application.Abstractions.Services;
 using Domain.Entities;
+using Domain.Enums;
 using Domain.Repositories;
 using Domain.SeedWork;
 using MediatR;
@@ -10,9 +11,9 @@ namespace Application.Features.ChatRoomInvites.Commands.CreateChatRoomInvite
     public class CreateChatRoomInviteCommandHandler : IRequestHandler<CreateChatRoomInviteCommand, Guid>
     {
         private readonly IChatRoomInviteRepository _inviteRepository;
-        private readonly IUserQueryRepository _userQueryRepository; // Davet edilenin şubesini kontrol için
+        private readonly IUserQueryRepository _userQueryRepository;
         private readonly IUnitOfWork _unitOfWork;
-        private readonly INotificationService _notificationService; // SignalR
+        private readonly INotificationService _notificationService;
 
         public CreateChatRoomInviteCommandHandler(
             IChatRoomInviteRepository inviteRepository,
@@ -28,31 +29,39 @@ namespace Application.Features.ChatRoomInvites.Commands.CreateChatRoomInvite
 
         public async Task<Guid> Handle(CreateChatRoomInviteCommand request, CancellationToken cancellationToken)
         {
-            // Kural 1: Davet edilen kullanıcı da aynı şubede mi?
+            if (request.TargetRoomType is not (RoomType.Private or RoomType.Group))
+                throw new Exception("Davet tipi yalnızca Private veya Group olabilir.");
+
             var inviteeProfile = await _userQueryRepository.GetByIdAsync(request.InviteeUserId, cancellationToken);
             if (inviteeProfile == null || inviteeProfile.BranchId != request.UserCurrentBranchId)
                 throw new Exception("Davet göndermek için her iki kullanıcı da aynı şubede olmalıdır.");
 
-            // Kural 2: Zaten bekleyen bir davet var mı?
             if (await _inviteRepository.HasPendingInviteAsync(request.InviterUserId, request.InviteeUserId, cancellationToken))
                 throw new Exception("Bu kullanıcıyla zaten bekleyen bir davetiniz var.");
 
-            // Daveti oluştur
+            var inviterProfile = await _userQueryRepository.GetByIdAsync(request.InviterUserId, cancellationToken);
+
             var invite = ChatRoomInvite.Create(
                 request.PublicChatRoomId,
                 request.InviterUserId,
-                request.InviteeUserId
-            );
+                request.InviteeUserId,
+                request.TargetRoomType);
 
             _inviteRepository.Add(invite);
             await _unitOfWork.SaveChangesAsync(cancellationToken);
 
-            // SignalR ile davet edilen kullanıcıya "Davet Aldın" bildirimi yolla
             await _notificationService.SendNotificationToUserAsync(
-                request.InviteeUserId.ToString(), // (UserId'yi SignalR grubu olarak kullanıyoruz)
-                "ReceiveInvite", // Client'ın dinleyeceği metot
-                new { InviteId = invite.Id, InviterName = "Kullanıcı Adı" } // (InviterName'i de eklemeliyiz)
-            );
+                inviteeProfile.IdentityId.ToString(),
+                "ReceiveInvite",
+                new
+                {
+                    InviteId = invite.Id,
+                    InviterUserId = request.InviterUserId,
+                    InviterName = inviterProfile?.UserName ?? "Kullanıcı",
+                    InviterFileId = inviterProfile?.FileId,
+                    TargetRoomType = request.TargetRoomType.ToString(),
+                    PublicChatRoomId = request.PublicChatRoomId
+                });
 
             return invite.Id;
         }

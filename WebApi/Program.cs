@@ -171,9 +171,15 @@ try
     #endregion
     builder.Services.AddSignalR();
 
+    builder.Services.AddSingleton<IPresenceService, InMemoryPresenceService>();
     builder.Services.AddScoped<INotificationService, SignalRNotificationService>();
 
-    builder.Services.AddControllers();
+    builder.Services.AddControllers()
+        .AddJsonOptions(options =>
+        {
+            options.JsonSerializerOptions.Converters.Add(
+                new System.Text.Json.Serialization.JsonStringEnumConverter());
+        });
     builder.Services.AddEndpointsApiExplorer();
 
     builder.Services.AddSwaggerGen(options =>

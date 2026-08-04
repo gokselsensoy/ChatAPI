@@ -5,11 +5,13 @@ using Application.Features.ChatRooms.Commands.LeaveChatRoom;
 using Application.Features.ChatRooms.Commands.SendMessage;
 using Application.Features.ChatRooms.DTOs;
 using Application.Features.ChatRooms.Queries.GetChatRoomMessages;
+using Application.Features.ChatRooms.Queries.GetGroupInbox;
 using Application.Features.ChatRooms.Queries.GetPrivateInbox;
 using Application.Features.ChatRooms.Queries.GetPublicRoomsByBranch;
 using Application.Features.Users.DTOs;
 using Application.Features.Users.Queries.GetMyProfile;
 using Application.Shared.Pagination;
+using Domain.Enums;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -31,9 +33,6 @@ namespace WebApi.Controllers
             _sender = sender;
         }
 
-        /// <summary>
-        /// Kullanıcının o an check-in yaptığı şubedeki PUBLIC odaları listeler (son mesaj / hasNew dahil).
-        /// </summary>
         [HttpGet("public")]
         [ProducesResponseType(typeof(List<ChatRoomDto>), StatusCodes.Status200OK)]
         public async Task<IActionResult> GetPublicRoomsForMyBranch(CancellationToken cancellationToken)
@@ -46,7 +45,7 @@ namespace WebApi.Controllers
         }
 
         /// <summary>
-        /// Kullanıcının üye olduğu Private / Group odaları (inbox) listeler.
+        /// Private 1:1 inbox (geo'suz) — peer + isOnline + unread.
         /// </summary>
         [HttpGet("private-inbox")]
         [ProducesResponseType(typeof(List<ChatRoomDto>), StatusCodes.Status200OK)]
@@ -60,19 +59,41 @@ namespace WebApi.Controllers
         }
 
         /// <summary>
-        /// O anki şubede yeni bir chat odası oluşturur. (Genelde admin yetkisi gerektirir)
+        /// Group inbox (geo'lu masa / özel) — unread + onlineMemberCount.
         /// </summary>
+        [HttpGet("group-inbox")]
+        [ProducesResponseType(typeof(List<ChatRoomDto>), StatusCodes.Status200OK)]
+        public async Task<IActionResult> GetGroupInbox(CancellationToken cancellationToken)
+        {
+            var user = await GetMyProfileDto();
+            if (user == null) return Unauthorized();
+
+            var rooms = await _sender.Send(new GetGroupInboxQuery { UserId = user.Id }, cancellationToken);
+            return Ok(rooms);
+        }
+
+        /// <summary>Eski premium-inbox yolu — private-inbox ile aynı.</summary>
+        [HttpGet("premium-inbox")]
+        [Obsolete("Use GET /api/chatrooms/private-inbox")]
+        [ProducesResponseType(typeof(List<ChatRoomDto>), StatusCodes.Status200OK)]
+        public Task<IActionResult> GetPremiumInboxAlias(CancellationToken cancellationToken) =>
+            GetPrivateInbox(cancellationToken);
+
         [HttpPost]
         [ProducesResponseType(typeof(Guid), StatusCodes.Status201Created)]
         public async Task<IActionResult> CreateRoom([FromBody] CreateChatRoomCommand command)
         {
+            var user = await GetMyProfileDto();
+            if (user?.BranchId == null)
+                return BadRequest("Oda oluşturmak için bir şubeye check-in yapmalısınız.");
+
+            command.BranchId = user.BranchId.Value;
+            command.RoomType = RoomType.Public;
+
             var roomId = await _sender.Send(command);
             return CreatedAtAction(nameof(GetMessages), new { roomId = roomId }, new { id = roomId });
         }
 
-        /// <summary>
-        /// Belirtilen odaya katılır.
-        /// </summary>
         [HttpPost("join/{roomId:guid}")]
         [ProducesResponseType(StatusCodes.Status204NoContent)]
         public async Task<IActionResult> JoinRoom(Guid roomId)
@@ -80,19 +101,10 @@ namespace WebApi.Controllers
             var user = await GetMyProfileDto();
             if (user == null) return Unauthorized();
 
-            var command = new JoinChatRoomCommand
-            {
-                RoomId = roomId,
-                UserId = user.Id
-            };
-
-            await _sender.Send(command);
+            await _sender.Send(new JoinChatRoomCommand { RoomId = roomId, UserId = user.Id });
             return NoContent();
         }
 
-        /// <summary>
-        /// Belirtilen odadan ayrılır.
-        /// </summary>
         [HttpPost("leave/{roomId:guid}")]
         [ProducesResponseType(StatusCodes.Status204NoContent)]
         public async Task<IActionResult> LeaveRoom(Guid roomId)
@@ -100,36 +112,23 @@ namespace WebApi.Controllers
             var user = await GetMyProfileDto();
             if (user == null) return Unauthorized();
 
-            var command = new LeaveChatRoomCommand
-            {
-                RoomId = roomId,
-                UserId = user.Id
-            };
-
-            await _sender.Send(command);
+            await _sender.Send(new LeaveChatRoomCommand { RoomId = roomId, UserId = user.Id });
             return NoContent();
         }
 
-        /// <summary>
-        /// Bir odadaki mesajları sayfalı olarak listeler. Okundu işaretler.
-        /// </summary>
         [HttpGet("messages/{roomId:guid}")]
         [ProducesResponseType(typeof(PaginatedResponse<ChatRoomMessageDto>), StatusCodes.Status200OK)]
         public async Task<IActionResult> GetMessages(Guid roomId, [FromQuery] PaginatedRequest pagination)
         {
-            var query = new GetChatMessagesQuery
+            var messages = await _sender.Send(new GetChatMessagesQuery
             {
                 RoomId = roomId,
                 PageNumber = pagination.PageNumber,
                 PageSize = pagination.PageSize
-            };
-            var messages = await _sender.Send(query);
+            });
             return Ok(messages);
         }
 
-        /// <summary>
-        /// Bir odaya mesaj gönderir (SignalR ile yayınlanır).
-        /// </summary>
         [HttpPost("messages/{roomId:guid}")]
         [ProducesResponseType(typeof(ChatRoomMessageDto), StatusCodes.Status201Created)]
         public async Task<IActionResult> SendMessage(Guid roomId, [FromBody] SendMessageRequest request)
@@ -137,25 +136,21 @@ namespace WebApi.Controllers
             var user = await GetMyProfileDto();
             if (user == null) return Unauthorized();
 
-            var command = new SendMessageCommand
+            var messageDto = await _sender.Send(new SendMessageCommand
             {
                 RoomId = roomId,
                 Message = request.Message,
                 SenderUserId = user.Id,
                 SenderUserName = user.UserName
-            };
-
-            var messageDto = await _sender.Send(command);
+            });
 
             return CreatedAtAction(nameof(GetMessages), new { roomId = roomId }, messageDto);
         }
 
-        /// <summary>
-        /// O anki şubede yeni bir ÖZEL GRUP odası oluşturur ve üyeleri ekler.
-        /// </summary>
+        /// <summary>Çok kişilik Group (geo'lu) odası.</summary>
         [HttpPost("create-group-room")]
         [ProducesResponseType(typeof(Guid), StatusCodes.Status201Created)]
-        public async Task<IActionResult> CreatePrivateGroup([FromBody] CreateGroupRoomCommand command)
+        public async Task<IActionResult> CreateGroupRoom([FromBody] CreateGroupRoomCommand command)
         {
             var user = await GetMyProfileDto();
             if (user?.BranchId == null)
@@ -175,9 +170,7 @@ namespace WebApi.Controllers
                                 ?? User.FindFirstValue("sub");
 
             if (string.IsNullOrEmpty(identityIdString) || !Guid.TryParse(identityIdString, out var identityId))
-            {
                 return null;
-            }
 
             try
             {
@@ -192,6 +185,6 @@ namespace WebApi.Controllers
 
     public class SendMessageRequest
     {
-        public string Message { get; set; }
+        public string Message { get; set; } = string.Empty;
     }
 }

@@ -51,10 +51,11 @@ namespace Application.Features.ChatRooms.Commands.SendMessage
             if (isBanned)
                 throw new UnauthorizedAccessException("Bu şubede mesaj göndermeniz engellenmiştir.");
 
-            if (room.RoomType == RoomType.Group)
-            {
-                await CheckGeoLockAsync(room, room.BranchId);
-            }
+            if (room.IsMemberOnlyRoom && !room.ChatRoomUserMaps.Any(m => m.UserId == request.SenderUserId))
+                throw new UnauthorizedAccessException("Bu odaya mesaj gönderme yetkiniz yok.");
+
+            if (room.RequiresCheckInForMessaging)
+                await EnsureUserAtBranchOrAdminAsync(request.SenderUserId, room.BranchId, cancellationToken);
 
             var message = room.AddMessage(request.SenderUserId, request.Message);
 
@@ -84,7 +85,8 @@ namespace Application.Features.ChatRooms.Commands.SendMessage
                 LastMessagePreview = previewText,
                 LastMessageAt = message.CreatedDate,
                 SenderUserId = message.SenderUserId,
-                HasNew = true
+                HasNew = true,
+                UnreadCount = 1
             };
 
             await _notificationService.SendNotificationToGroupAsync(
@@ -105,12 +107,18 @@ namespace Application.Features.ChatRooms.Commands.SendMessage
                 var identityByUserId = await _userQueryRepository.GetIdentityIdsByUserIdsAsync(memberUserIds, cancellationToken);
                 var identityIds = identityByUserId.Values.Select(id => id.ToString()).ToList();
 
+                if (room.RoomType == RoomType.Private)
+                {
+                    var peerId = memberUserIds.FirstOrDefault(id => id != request.SenderUserId);
+                    preview.PeerUserId = peerId == Guid.Empty ? null : peerId;
+                }
+
                 await _notificationService.SendNotificationToUsersAsync(
                     identityIds,
                     "PrivateInboxUpdated",
                     preview);
 
-                // OS push: Private/Group — gönderen hariç (app kapalı/arka plan)
+                // OS push: Private + Group — gönderen hariç
                 var recipientUserIds = memberUserIds.Where(id => id != request.SenderUserId).ToList();
                 var tokens = await _deviceTokenRepository.GetActiveTokensByUserIdsAsync(recipientUserIds, cancellationToken);
                 if (tokens.Count > 0)
@@ -137,16 +145,14 @@ namespace Application.Features.ChatRooms.Commands.SendMessage
             return messageDto;
         }
 
-        private async Task CheckGeoLockAsync(ChatRoom room, Guid requiredBranchId)
+        private async Task EnsureUserAtBranchOrAdminAsync(Guid userId, Guid branchId, CancellationToken cancellationToken)
         {
-            var memberUserIds = room.ChatRoomUserMaps.Select(m => m.UserId);
-            var userBranchMap = await _userQueryRepository.GetUserBranchMapAsync(memberUserIds);
+            if (await _branchQueryRepository.CanUserManageBranchAsync(userId, branchId, cancellationToken))
+                return;
 
-            var membersAtBranch = userBranchMap
-                .Count(pair => pair.Value.HasValue && pair.Value.Value == requiredBranchId);
-
-            if (membersAtBranch < 2 && room.RoomType == RoomType.Group)
-                throw new Exception("Bu grup sohbetine devam etmek için en az 2 üyenin mekanda olması gerekir.");
+            var branchMap = await _userQueryRepository.GetUserBranchMapAsync(new[] { userId }, cancellationToken);
+            if (!branchMap.TryGetValue(userId, out var userBranchId) || userBranchId != branchId)
+                throw new Exception("Bu sohbete devam etmek için şubede check-in olmalısınız.");
         }
 
         private static string? TruncatePreview(string? message)
