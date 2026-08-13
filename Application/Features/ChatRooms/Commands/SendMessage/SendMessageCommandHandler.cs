@@ -20,6 +20,7 @@ namespace Application.Features.ChatRooms.Commands.SendMessage
         private readonly IBlacklistQueryRepository _blacklistQueryRepository;
         private readonly IBranchQueryRepository _branchQueryRepository;
         private readonly IUserDeviceTokenRepository _deviceTokenRepository;
+        private readonly IPresenceService _presenceService;
 
         public SendMessageCommandHandler(
             IUnitOfWork unitOfWork,
@@ -29,7 +30,8 @@ namespace Application.Features.ChatRooms.Commands.SendMessage
             IUserQueryRepository userQueryRepository,
             IBlacklistQueryRepository blacklistQueryRepository,
             IBranchQueryRepository branchQueryRepository,
-            IUserDeviceTokenRepository deviceTokenRepository)
+            IUserDeviceTokenRepository deviceTokenRepository,
+            IPresenceService presenceService)
         {
             _unitOfWork = unitOfWork;
             _chatRoomRepository = chatRoomRepository;
@@ -39,6 +41,7 @@ namespace Application.Features.ChatRooms.Commands.SendMessage
             _blacklistQueryRepository = blacklistQueryRepository;
             _branchQueryRepository = branchQueryRepository;
             _deviceTokenRepository = deviceTokenRepository;
+            _presenceService = presenceService;
         }
 
         public async Task<ChatRoomMessageDto> Handle(SendMessageCommand request, CancellationToken cancellationToken)
@@ -89,10 +92,32 @@ namespace Application.Features.ChatRooms.Commands.SendMessage
                 UnreadCount = 1
             };
 
-            await _notificationService.SendNotificationToGroupAsync(
+            var senderConnectionIds = _presenceService.GetConnectionIds(request.SenderUserId);
+            await _notificationService.SendNotificationToGroupExceptAsync(
                 $"chatroom:{room.Id}",
+                senderConnectionIds,
                 "ReceiveMessage",
                 messageDto);
+
+            // Gönderen JoinRoomGroup'ta; grup yayını isMine=false olduğu için ayrı gönderilir
+            if (senderConnectionIds.Count > 0)
+            {
+                var mineDto = new ChatRoomMessageDto
+                {
+                    Id = messageDto.Id,
+                    ChatRoomId = messageDto.ChatRoomId,
+                    SenderUserId = messageDto.SenderUserId,
+                    SenderUserName = messageDto.SenderUserName,
+                    Message = messageDto.Message,
+                    CreatedDate = messageDto.CreatedDate,
+                    SenderRole = messageDto.SenderRole,
+                    IsMine = true
+                };
+                await _notificationService.SendNotificationToConnectionsAsync(
+                    senderConnectionIds,
+                    "ReceiveMessage",
+                    mineDto);
+            }
 
             if (room.RoomType == RoomType.Public)
             {

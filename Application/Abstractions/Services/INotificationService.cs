@@ -6,6 +6,17 @@
         Task SendNotificationToAllAsync(string methodName, object payload);
         Task SendNotificationToGroupAsync(string groupName, string methodName, object payload);
 
+        Task SendNotificationToGroupExceptAsync(
+            string groupName,
+            IReadOnlyList<string> excludedConnectionIds,
+            string methodName,
+            object payload);
+
+        Task SendNotificationToConnectionsAsync(
+            IReadOnlyList<string> connectionIds,
+            string methodName,
+            object payload);
+
         /// <summary>
         /// Birden fazla kişisel kanala (identity id grupları) aynı hafif payload'u yollar.
         /// </summary>

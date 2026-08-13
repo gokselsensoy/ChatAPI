@@ -11,5 +11,9 @@ namespace Application.Abstractions.Services
         bool IsOnline(Guid userId);
 
         IReadOnlyDictionary<Guid, bool> GetOnlineStatus(IEnumerable<Guid> userIds);
+
+        void RegisterConnection(Guid userId, string connectionId);
+        void UnregisterConnection(Guid userId, string connectionId);
+        IReadOnlyList<string> GetConnectionIds(Guid userId);
     }
 }

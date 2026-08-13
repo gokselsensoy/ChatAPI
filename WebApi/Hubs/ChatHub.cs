@@ -51,6 +51,7 @@ namespace WebApi.Hubs
             var currentUser = await GetCurrentUserAsync();
             if (currentUser != null)
             {
+                _presenceService.RegisterConnection(currentUser.Id, Context.ConnectionId);
                 var becameOnline = _presenceService.SetOnline(currentUser.Id);
                 if (becameOnline)
                     await NotifySharedPeersAsync(currentUser.Id, isOnline: true, lastSeenAt: null);
@@ -64,6 +65,7 @@ namespace WebApi.Hubs
             var currentUser = await GetCurrentUserAsync();
             if (currentUser != null)
             {
+                _presenceService.UnregisterConnection(currentUser.Id, Context.ConnectionId);
                 var becameOffline = _presenceService.SetOffline(currentUser.Id);
                 if (becameOffline)
                 {

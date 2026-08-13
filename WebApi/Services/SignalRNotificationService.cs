@@ -23,6 +23,33 @@ namespace WebApi.Services
             await _hubContext.Clients.Group(groupName).SendAsync(methodName, payload);
         }
 
+        public async Task SendNotificationToGroupExceptAsync(
+            string groupName,
+            IReadOnlyList<string> excludedConnectionIds,
+            string methodName,
+            object payload)
+        {
+            if (excludedConnectionIds == null || excludedConnectionIds.Count == 0)
+            {
+                await _hubContext.Clients.Group(groupName).SendAsync(methodName, payload);
+                return;
+            }
+
+            await _hubContext.Clients.GroupExcept(groupName, excludedConnectionIds)
+                .SendAsync(methodName, payload);
+        }
+
+        public async Task SendNotificationToConnectionsAsync(
+            IReadOnlyList<string> connectionIds,
+            string methodName,
+            object payload)
+        {
+            if (connectionIds == null || connectionIds.Count == 0)
+                return;
+
+            await _hubContext.Clients.Clients(connectionIds).SendAsync(methodName, payload);
+        }
+
         public async Task SendNotificationToUserAsync(string userId, string methodName, object payload)
         {
             // OnConnectedAsync identity id'yi Groups'a ekler
