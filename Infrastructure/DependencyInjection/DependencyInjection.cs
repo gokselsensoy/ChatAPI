@@ -1,4 +1,4 @@
-﻿using Application.Abstractions.QueryRepositories;
+using Application.Abstractions.QueryRepositories;
 using Application.Abstractions.Services;
 using Domain.Repositories;
 using Domain.SeedWork;
@@ -62,6 +62,7 @@ namespace Infrastructure.DependencyInjection
             services.AddScoped<IMenuQueryRepository, MenuQueryRepository>();
 
             services.AddScoped<IUserDeviceTokenRepository, UserDeviceTokenRepository>();
+            services.AddScoped<IPushNotificationService, Infrastructure.Services.ExpoPushNotificationService>();
 
             // 5. Diğer servisler (Email vb.)
             // services.AddTransient<IEmailService, EmailService>();
