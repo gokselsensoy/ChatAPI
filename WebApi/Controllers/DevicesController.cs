@@ -23,7 +23,8 @@ namespace WebApi.Controllers
         }
 
         /// <summary>
-        /// FCM device token kaydı / güncelleme (login ve token yenilemede çağır).
+        /// Expo push token kaydı / güncelleme (login ve token yenilemede çağır).
+        /// Token: ExponentPushToken[...]
         /// </summary>
         [HttpPost("register")]
         [ProducesResponseType(StatusCodes.Status204NoContent)]

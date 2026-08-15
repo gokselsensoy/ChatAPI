@@ -34,12 +34,4 @@
     <ProjectReference Include="..\Integration\Integration.csproj" />
   </ItemGroup>
 
-  <!-- Local/prod secret; gitignored. Copied so FCM finds it under BaseDirectory after publish. -->
-  <ItemGroup>
-    <None Update="firebase-service-account.json" Condition="Exists('firebase-service-account.json')">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-      <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
-    </None>
-  </ItemGroup>
-
 </Project>

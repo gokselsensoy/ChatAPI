@@ -12,10 +12,13 @@ namespace Integration.DependencyInjection
             this IServiceCollection services,
             IConfiguration configuration)
         {
-            services.Configure<FirebaseOptions>(configuration.GetSection(FirebaseOptions.SectionName));
+            services.Configure<ExpoPushOptions>(configuration.GetSection(ExpoPushOptions.SectionName));
 
             services.AddTransient<IPhotoUploader, GoogleDrivePhotoUploader>();
-            services.AddSingleton<IPushNotificationService, FcmPushNotificationService>();
+            services.AddHttpClient<IPushNotificationService, ExpoPushNotificationService>(client =>
+            {
+                client.Timeout = TimeSpan.FromSeconds(30);
+            });
 
             services.AddHttpClient<GoogleDrivePhotoUploader>(client =>
             {
