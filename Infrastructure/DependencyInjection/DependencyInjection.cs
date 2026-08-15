@@ -1,4 +1,4 @@
-﻿using Application.Abstractions.QueryRepositories;
+using Application.Abstractions.QueryRepositories;
 using Application.Abstractions.Services;
 using Domain.Repositories;
 using Domain.SeedWork;

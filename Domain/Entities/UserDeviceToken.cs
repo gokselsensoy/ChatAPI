@@ -18,6 +18,8 @@ namespace Domain.Entities
                 throw new ArgumentException("UserId geçersiz.");
             if (string.IsNullOrWhiteSpace(token))
                 throw new ArgumentException("Device token boş olamaz.");
+            if (!IsExpoPushToken(token))
+                throw new ArgumentException("Token Expo push token olmalı (ExponentPushToken[...]).");
             if (string.IsNullOrWhiteSpace(platform))
                 throw new ArgumentException("Platform boş olamaz.");
 
@@ -67,6 +69,13 @@ namespace Domain.Entities
             UpdatedDate = DateTime.UtcNow;
             IsActive = true;
             IsDeleted = false;
+        }
+
+        public static bool IsExpoPushToken(string token)
+        {
+            var t = token.Trim();
+            return t.StartsWith("ExponentPushToken[", StringComparison.Ordinal)
+                || t.StartsWith("ExpoPushToken[", StringComparison.Ordinal);
         }
     }
 }
