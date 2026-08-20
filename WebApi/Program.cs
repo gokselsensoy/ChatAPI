@@ -13,6 +13,7 @@ using Serilog;
 using System;
 using System.Reflection;
 using System.Security.Claims;
+using System.Security.Cryptography.X509Certificates;
 using WebApi;
 using WebApi.Hubs;
 using WebApi.Middleware;
@@ -125,12 +126,21 @@ try
             }
             else
             {
-                // Production: kalıcı şifreleme/imza için gerçek sertifika veya Azure Key Vault vb. eklenmeli
-                options.AddEphemeralEncryptionKey()
-                        .AddEphemeralSigningKey();
+                // OpenIddict signing requires an asymmetric key (RSA/ECDSA certificate).
+                // Store base64-encoded .pfx files in Azure App Settings (OpenIddict__SigningCertificate / EncryptionCertificate).
+                options.AddSigningCertificate(OpenIddictCertificateLoader.Load(
+                    builder.Configuration,
+                    "OpenIddict:SigningCertificate",
+                    "OpenIddict:SigningCertificatePassword"));
+
+                options.AddEncryptionCertificate(OpenIddictCertificateLoader.Load(
+                    builder.Configuration,
+                    "OpenIddict:EncryptionCertificate",
+                    "OpenIddict:EncryptionCertificatePassword"));
             }
 
-            //options.SetAccessTokenLifetime(TimeSpan.FromSeconds(10));
+            options.SetAccessTokenLifetime(TimeSpan.FromSeconds(30));
+            options.SetRefreshTokenLifetime(TimeSpan.FromDays(14));
 
             options.UseAspNetCore()
                    .EnableTokenEndpointPassthrough();
@@ -291,5 +301,24 @@ catch (Exception ex)
 finally
 {
     Log.CloseAndFlush();
+}
+
+static partial class OpenIddictCertificateLoader
+{
+    public static X509Certificate2 Load(IConfiguration configuration, string certificateKey, string passwordKey)
+    {
+        var base64 = configuration[certificateKey]
+            ?? throw new InvalidOperationException(
+                $"{certificateKey} is missing. Set it in Azure App Settings as {certificateKey.Replace(":", "__")}.");
+
+        var password = configuration[passwordKey];
+        var bytes = Convert.FromBase64String(base64);
+
+        // EphemeralKeySet avoids private-key persistence issues on Azure App Service.
+        return X509CertificateLoader.LoadPkcs12(
+            bytes,
+            password,
+            X509KeyStorageFlags.MachineKeySet | X509KeyStorageFlags.EphemeralKeySet);
+    }
 }
 
