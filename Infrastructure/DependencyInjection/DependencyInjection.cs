@@ -54,6 +54,7 @@ namespace Infrastructure.DependencyInjection
             services.AddScoped<IChatRoomQueryRepository, ChatRoomQueryRepository>();
 
             services.AddScoped<IChatRoomInviteRepository, ChatRoomInviteRepository>();
+            services.AddScoped<IChatRoomInviteQueryRepository, ChatRoomInviteQueryRepository>();
 
             services.AddScoped<IBlacklistRepository, BlacklistRepository>();
             services.AddScoped<IBlacklistQueryRepository, BlacklistQueryRepository>();
