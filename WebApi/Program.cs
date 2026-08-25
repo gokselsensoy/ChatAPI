@@ -139,7 +139,6 @@ try
                     "OpenIddict:EncryptionCertificatePassword"));
             }
 
-            options.SetAccessTokenLifetime(TimeSpan.FromSeconds(30));
             options.SetRefreshTokenLifetime(TimeSpan.FromDays(14));
 
             options.UseAspNetCore()
