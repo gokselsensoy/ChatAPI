@@ -149,6 +149,11 @@ namespace WebApi.Controllers
             return Ok(messages);
         }
 
+        /// <summary>
+        /// Public / Group / Private odaya mesaj gönderir.
+        /// WhatsApp tarzı yanıt için body'de replyToMessageId verin (aynı oda, kendi mesajı dahil).
+        /// SignalR ReceiveMessage: gönderene isMine=true, diğerlerine isMine=false.
+        /// </summary>
         [HttpPost("messages/{roomId:guid}")]
         [ProducesResponseType(typeof(ChatRoomMessageDto), StatusCodes.Status201Created)]
         public async Task<IActionResult> SendMessage(Guid roomId, [FromBody] SendMessageRequest request)
@@ -160,6 +165,7 @@ namespace WebApi.Controllers
             {
                 RoomId = roomId,
                 Message = request.Message,
+                ReplyToMessageId = request.ReplyToMessageId,
                 SenderUserId = user.Id,
                 SenderUserName = user.UserName
             });
@@ -206,5 +212,11 @@ namespace WebApi.Controllers
     public class SendMessageRequest
     {
         public string Message { get; set; } = string.Empty;
+
+        /// <summary>
+        /// WhatsApp tarzı yanıt: bu odadaki mesajın id'si. Normal mesaj için null/omit.
+        /// Kendi mesajına da yanıt verilebilir.
+        /// </summary>
+        public Guid? ReplyToMessageId { get; set; }
     }
 }

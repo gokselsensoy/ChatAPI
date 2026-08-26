@@ -237,6 +237,8 @@ namespace Infrastructure.Persistence.QueryRepositories
             foreach (var item in items)
             {
                 item.IsMine = item.SenderUserId == currentUserId;
+                item.ReplyToIsMine = item.ReplyToSenderUserId.HasValue
+                    && item.ReplyToSenderUserId.Value == currentUserId;
                 item.SenderRole = adminTagUserIds.Contains(item.SenderUserId) ? "Admin" : "Müşteri";
             }
 

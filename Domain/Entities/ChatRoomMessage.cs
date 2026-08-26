@@ -1,4 +1,5 @@
-﻿using Domain.SeedWork;
+﻿using Domain.Exceptions;
+using Domain.SeedWork;
 
 namespace Domain.Entities
 {
@@ -7,17 +8,23 @@ namespace Domain.Entities
         public string Message { get; private set; }
         public Guid ChatRoomId { get; private set; }
         public Guid SenderUserId { get; private set; }
+        public Guid? ReplyToMessageId { get; private set; }
 
         // Navigations
         public ChatRoom? ChatRoom { get; private set; }
         public User? SenderUser { get; private set; }
+        public ChatRoomMessage? ReplyToMessage { get; private set; }
 
         private ChatRoomMessage() { }
 
-        public static ChatRoomMessage Create(Guid chatRoomId, Guid senderUserId, string message)
+        public static ChatRoomMessage Create(
+            Guid chatRoomId,
+            Guid senderUserId,
+            string message,
+            Guid? replyToMessageId = null)
         {
             if (string.IsNullOrWhiteSpace(message))
-                throw new Exception("Mesaj boş olamaz."); // (ChatRoomDomainException)
+                throw new ChatRoomDomainException("Mesaj boş olamaz.");
 
             return new ChatRoomMessage
             {
@@ -25,7 +32,8 @@ namespace Domain.Entities
                 ChatRoomId = chatRoomId,
                 SenderUserId = senderUserId,
                 Message = message,
-                CreatedDate = DateTime.UtcNow // (Base 'Entity'de bu yoksa buraya ekle)
+                ReplyToMessageId = replyToMessageId,
+                CreatedDate = DateTime.UtcNow
             };
         }
     }

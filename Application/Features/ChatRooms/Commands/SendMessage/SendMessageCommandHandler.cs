@@ -60,24 +60,23 @@ namespace Application.Features.ChatRooms.Commands.SendMessage
             if (room.RequiresCheckInForMessaging)
                 await EnsureUserAtBranchOrAdminAsync(request.SenderUserId, room.BranchId, cancellationToken);
 
-            var message = room.AddMessage(request.SenderUserId, request.Message);
+            var replyTo = await ResolveReplyToAsync(request.ReplyToMessageId, room.Id, cancellationToken);
+            var message = room.AddMessage(request.SenderUserId, request.Message, replyTo);
 
             await _unitOfWork.SaveChangesAsync(cancellationToken);
 
             var privileged = await _branchQueryRepository.GetBranchPrivilegedUserIdsAsync(room.BranchId, cancellationToken);
             var senderRole = privileged.Contains(message.SenderUserId) ? "Admin" : "Müşteri";
 
-            var messageDto = new ChatRoomMessageDto
-            {
-                Id = message.Id,
-                ChatRoomId = message.ChatRoomId,
-                SenderUserId = message.SenderUserId,
-                SenderUserName = request.SenderUserName,
-                Message = message.Message,
-                CreatedDate = message.CreatedDate,
-                SenderRole = senderRole,
-                IsMine = false
-            };
+            // Grup yayını: IsMine her alıcı için false (gönderen ayrı payload alır).
+            // ReplyToIsMine grupta viewer'a göre kişisel olamaz; client replyToSenderUserId kullanır.
+            var messageDto = BuildMessageDto(
+                message,
+                request.SenderUserName,
+                senderRole,
+                isMine: false,
+                replyTo,
+                viewerUserId: null);
 
             var previewText = TruncatePreview(message.Message);
             var preview = new ChatRoomPreviewDto
@@ -102,17 +101,13 @@ namespace Application.Features.ChatRooms.Commands.SendMessage
             // Gönderen JoinRoomGroup'ta; grup yayını isMine=false olduğu için ayrı gönderilir
             if (senderConnectionIds.Count > 0)
             {
-                var mineDto = new ChatRoomMessageDto
-                {
-                    Id = messageDto.Id,
-                    ChatRoomId = messageDto.ChatRoomId,
-                    SenderUserId = messageDto.SenderUserId,
-                    SenderUserName = messageDto.SenderUserName,
-                    Message = messageDto.Message,
-                    CreatedDate = messageDto.CreatedDate,
-                    SenderRole = messageDto.SenderRole,
-                    IsMine = true
-                };
+                var mineDto = BuildMessageDto(
+                    message,
+                    request.SenderUserName,
+                    senderRole,
+                    isMine: true,
+                    replyTo,
+                    viewerUserId: request.SenderUserId);
                 await _notificationService.SendNotificationToConnectionsAsync(
                     senderConnectionIds,
                     "ReceiveMessage",
@@ -167,7 +162,49 @@ namespace Application.Features.ChatRooms.Commands.SendMessage
             }
 
             messageDto.IsMine = true;
+            messageDto.ReplyToIsMine = replyTo != null && replyTo.SenderUserId == request.SenderUserId;
             return messageDto;
+        }
+
+        private async Task<ChatRoomMessage?> ResolveReplyToAsync(
+            Guid? replyToMessageId,
+            Guid roomId,
+            CancellationToken cancellationToken)
+        {
+            if (!replyToMessageId.HasValue || replyToMessageId.Value == Guid.Empty)
+                return null;
+
+            var replyTo = await _chatRoomRepository.GetMessageByIdAsync(replyToMessageId.Value, cancellationToken);
+            if (replyTo == null || replyTo.ChatRoomId != roomId)
+                throw new NotFoundException("Yanıtlanan mesaj bu odada bulunamadı.");
+
+            return replyTo;
+        }
+
+        private static ChatRoomMessageDto BuildMessageDto(
+            ChatRoomMessage message,
+            string senderUserName,
+            string senderRole,
+            bool isMine,
+            ChatRoomMessage? replyTo,
+            Guid? viewerUserId)
+        {
+            return new ChatRoomMessageDto
+            {
+                Id = message.Id,
+                ChatRoomId = message.ChatRoomId,
+                SenderUserId = message.SenderUserId,
+                SenderUserName = senderUserName,
+                Message = message.Message,
+                CreatedDate = message.CreatedDate,
+                SenderRole = senderRole,
+                IsMine = isMine,
+                ReplyToMessageId = replyTo?.Id,
+                ReplyToSenderUserId = replyTo?.SenderUserId,
+                ReplyToSenderUserName = replyTo?.SenderUser?.UserName,
+                ReplyToMessage = replyTo?.Message,
+                ReplyToIsMine = replyTo != null && viewerUserId.HasValue && replyTo.SenderUserId == viewerUserId.Value
+            };
         }
 
         private async Task EnsureUserAtBranchOrAdminAsync(Guid userId, Guid branchId, CancellationToken cancellationToken)

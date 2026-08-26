@@ -332,6 +332,9 @@ namespace Infrastructure.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
+                    b.Property<Guid?>("ReplyToMessageId")
+                        .HasColumnType("uuid");
+
                     b.Property<Guid>("SenderUserId")
                         .HasColumnType("uuid");
 
@@ -341,6 +344,8 @@ namespace Infrastructure.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("ChatRoomId");
+
+                    b.HasIndex("ReplyToMessageId");
 
                     b.HasIndex("SenderUserId");
 
@@ -1233,7 +1238,14 @@ namespace Infrastructure.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
+                    b.HasOne("Domain.Entities.ChatRoomMessage", "ReplyToMessage")
+                        .WithMany()
+                        .HasForeignKey("ReplyToMessageId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
                     b.Navigation("ChatRoom");
+
+                    b.Navigation("ReplyToMessage");
 
                     b.Navigation("SenderUser");
                 });

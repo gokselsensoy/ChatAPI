@@ -25,6 +25,13 @@ namespace Infrastructure.Persistence.Repositories
                 .FirstOrDefaultAsync(cr => cr.Id == id, cancellationToken);
         }
 
+        public async Task<ChatRoomMessage?> GetMessageByIdAsync(Guid messageId, CancellationToken cancellationToken = default)
+        {
+            return await _context.ChatRoomMessages
+                .Include(m => m.SenderUser)
+                .FirstOrDefaultAsync(m => m.Id == messageId && !m.IsDeleted, cancellationToken);
+        }
+
         public async Task<List<ChatRoom>> GetRoomsByUserAndBranchAsync(Guid userId, Guid branchId, CancellationToken cancellationToken = default)
         {
             return await _context.ChatRooms

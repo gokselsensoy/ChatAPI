@@ -100,12 +100,21 @@ namespace Domain.Entities
             UpdatedDate = DateTime.UtcNow;
         }
 
-        public ChatRoomMessage AddMessage(Guid senderUserId, string message)
+        public ChatRoomMessage AddMessage(Guid senderUserId, string message, ChatRoomMessage? replyToMessage = null)
         {
             if (!ChatRoomUserMaps.Any(m => m.UserId == senderUserId))
                 throw new ChatRoomDomainException("Mesaj göndermek için önce odaya katılmalısınız.");
 
-            var chatMessage = ChatRoomMessage.Create(Id, senderUserId, message);
+            Guid? replyToMessageId = null;
+            if (replyToMessage != null)
+            {
+                if (replyToMessage.ChatRoomId != Id || replyToMessage.IsDeleted)
+                    throw new ChatRoomDomainException("Yanıtlanan mesaj bu odada bulunamadı.");
+
+                replyToMessageId = replyToMessage.Id;
+            }
+
+            var chatMessage = ChatRoomMessage.Create(Id, senderUserId, message, replyToMessageId);
             Messages.Add(chatMessage);
             return chatMessage;
         }

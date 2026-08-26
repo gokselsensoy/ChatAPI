@@ -24,6 +24,13 @@ namespace Infrastructure.Persistence.Configurations
                 .WithMany(u => u.SentMessages) // User.cs'te tanımlı
                 .HasForeignKey(m => m.SenderUserId)
                 .OnDelete(DeleteBehavior.Restrict); // Kullanıcı silinirse mesajları kalsın
+
+            builder.HasOne(m => m.ReplyToMessage)
+                .WithMany()
+                .HasForeignKey(m => m.ReplyToMessageId)
+                .OnDelete(DeleteBehavior.SetNull);
+
+            builder.HasIndex(m => m.ReplyToMessageId);
         }
     }
 }

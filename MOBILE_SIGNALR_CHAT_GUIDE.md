@@ -68,11 +68,18 @@ Sadece `chatroom:{roomId}` grubuna gider.
   "message": "Merhaba",
   "createdDate": "2026-07-30T13:00:00Z",
   "isMine": false,
-  "senderRole": "Admin"
+  "senderRole": "Admin",
+  "replyToMessageId": null,
+  "replyToSenderUserId": null,
+  "replyToSenderUserName": null,
+  "replyToMessage": null,
+  "replyToIsMine": false
 }
 ```
 
 > Gönderen HTTP `201` response ile de mesajı alır. Hub grubundaysa `ReceiveMessage` da gelebilir → `message.id` ile duplicate engelle.
+>
+> Yanıt (quote): `replyToMessageId` doluysa quote bubble göster. Mobil not: `MOBILE_MESSAGE_REPLY.md`. Canlıda `replyToIsMine = replyToSenderUserId === currentUserId`.
 
 ### `BranchRoomPreviewUpdated` (branch liste)
 Public odada yeni mesaj olunca `branch:{branchId}` grubuna gider. Full mesaj değil:

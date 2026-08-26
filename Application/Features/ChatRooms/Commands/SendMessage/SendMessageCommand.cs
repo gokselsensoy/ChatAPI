@@ -8,6 +8,7 @@ namespace Application.Features.ChatRooms.Commands.SendMessage
     {
         public string Message { get; set; }
         public Guid RoomId { get; set; }
+        public Guid? ReplyToMessageId { get; set; }
 
         [JsonIgnore]
         public Guid SenderUserId { get; set; }
