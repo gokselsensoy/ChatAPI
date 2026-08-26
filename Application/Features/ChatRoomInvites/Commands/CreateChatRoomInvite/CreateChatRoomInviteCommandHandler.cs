@@ -33,7 +33,20 @@ namespace Application.Features.ChatRoomInvites.Commands.CreateChatRoomInvite
                 throw new Exception("Davet tipi yalnızca Private veya Group olabilir.");
 
             var inviteeProfile = await _userQueryRepository.GetByIdAsync(request.InviteeUserId, cancellationToken);
-            if (inviteeProfile == null || inviteeProfile.BranchId != request.UserCurrentBranchId)
+            if (inviteeProfile == null)
+                throw new Exception("Davet edilecek kullanıcı bulunamadı.");
+
+            var branchMap = await _userQueryRepository.GetUserBranchMapAsync(
+                new[] { request.InviterUserId, request.InviteeUserId },
+                cancellationToken);
+
+            var inviterBranchId = branchMap.GetValueOrDefault(request.InviterUserId);
+            var inviteeBranchId = branchMap.GetValueOrDefault(request.InviteeUserId);
+
+            if (!inviterBranchId.HasValue
+                || !inviteeBranchId.HasValue
+                || inviterBranchId != inviteeBranchId
+                || inviterBranchId != request.UserCurrentBranchId)
                 throw new Exception("Davet göndermek için her iki kullanıcı da aynı şubede olmalıdır.");
 
             if (await _inviteRepository.HasPendingInviteAsync(request.InviterUserId, request.InviteeUserId, cancellationToken))

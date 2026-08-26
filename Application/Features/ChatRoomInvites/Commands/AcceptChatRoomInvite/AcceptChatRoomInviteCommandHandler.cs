@@ -105,8 +105,27 @@ namespace Application.Features.ChatRoomInvites.Commands.AcceptChatRoomInvite
             _chatRoomRepository.Add(newRoom);
             invite.Accept(newRoom.Id);
 
-            newRoom.JoinViaInvite(invite.InviterUserId, newRoom.BranchId);
-            newRoom.JoinViaInvite(invite.InviteeUserId, newRoom.BranchId);
+            if (targetType == RoomType.Group)
+            {
+                var branchMap = await _userQueryRepository.GetUserBranchMapAsync(
+                    new[] { invite.InviterUserId, invite.InviteeUserId },
+                    cancellationToken);
+
+                var inviterBranchId = branchMap.GetValueOrDefault(invite.InviterUserId);
+                var inviteeBranchId = branchMap.GetValueOrDefault(invite.InviteeUserId);
+
+                if (inviterBranchId != newRoom.BranchId || inviteeBranchId != newRoom.BranchId)
+                    throw new Exception("Grup odasına katılmak için her iki kullanıcı da şubede check-in olmalıdır.");
+
+                newRoom.JoinViaInvite(invite.InviterUserId, inviterBranchId.Value);
+                newRoom.JoinViaInvite(invite.InviteeUserId, inviteeBranchId.Value);
+            }
+            else
+            {
+                // Private geo'suz: check-in şart değil.
+                newRoom.JoinViaInvite(invite.InviterUserId, newRoom.BranchId);
+                newRoom.JoinViaInvite(invite.InviteeUserId, newRoom.BranchId);
+            }
 
             await _unitOfWork.SaveChangesAsync(cancellationToken);
             return newRoom.Id;

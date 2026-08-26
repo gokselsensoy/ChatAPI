@@ -30,11 +30,16 @@ namespace Infrastructure.Persistence.QueryRepositories
 
         public async Task<UserDto?> GetByIdAsync(Guid userId, CancellationToken cancellationToken = default)
         {
-            return await _context.Users
+            var user = await _context.Users
                 .AsNoTracking()
                 .Where(u => u.Id == userId)
                 .ProjectTo<UserDto>(_mapper.ConfigurationProvider, cancellationToken)
                 .FirstOrDefaultAsync(cancellationToken);
+
+            if (user != null)
+                user.BranchId = await GetActiveBranchIdAsync(user.Id, cancellationToken);
+
+            return user;
         }
 
         public async Task<UserDto?> GetByIdentityIdAsync(Guid identityId, CancellationToken cancellationToken = default)
@@ -67,11 +72,7 @@ namespace Infrastructure.Persistence.QueryRepositories
                 .AsNoTracking()
                 .AnyAsync(b => b.OwnerUserId == userProfile.Id, cancellationToken);
 
-            userProfile.BranchId = await _context.UserLocations
-                .AsNoTracking()
-                .Where(ul => ul.UserId == userProfile.Id && !ul.IsDeleted)
-                .Select(ul => (Guid?)ul.BranchId)
-                .FirstOrDefaultAsync(cancellationToken);
+            userProfile.BranchId = await GetActiveBranchIdAsync(userProfile.Id, cancellationToken);
 
             if (userProfile.BranchId.HasValue)
             {
@@ -92,8 +93,8 @@ namespace Infrastructure.Persistence.QueryRepositories
             // 1. Önce bu kullanıcıların UserLocation tablosundaki kayıtlarını çekelim
             var locations = await _context.UserLocations
                 .AsNoTracking()
-                .Where(ul => userIds.Contains(ul.UserId))
-                .Select(ul => new { ul.UserId, ul.BranchId }) // Sadece ihtiyacımız olan alanlar
+                .Where(ul => userIds.Contains(ul.UserId) && !ul.IsDeleted)
+                .Select(ul => new { ul.UserId, ul.BranchId })
                 .ToListAsync(cancellationToken);
 
             // 2. Dictionary'yi oluştur. 
@@ -122,6 +123,15 @@ namespace Infrastructure.Persistence.QueryRepositories
                 .ToListAsync(cancellationToken);
 
             return rows.ToDictionary(x => x.Id, x => x.IdentityId);
+        }
+
+        private async Task<Guid?> GetActiveBranchIdAsync(Guid userId, CancellationToken cancellationToken)
+        {
+            return await _context.UserLocations
+                .AsNoTracking()
+                .Where(ul => ul.UserId == userId && !ul.IsDeleted)
+                .Select(ul => (Guid?)ul.BranchId)
+                .FirstOrDefaultAsync(cancellationToken);
         }
     }
 }
