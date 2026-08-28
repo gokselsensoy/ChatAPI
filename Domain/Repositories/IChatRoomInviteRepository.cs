@@ -11,5 +11,9 @@ namespace Domain.Repositories
             CancellationToken cancellationToken = default);
 
         Task<ChatRoomInvite?> GetByIdWithRoomAsync(Guid id, CancellationToken cancellationToken = default);
+
+        Task<List<ChatRoomInvite>> GetPendingIncomingWithDetailsAsync(
+            Guid inviteeUserId,
+            CancellationToken cancellationToken = default);
     }
 }

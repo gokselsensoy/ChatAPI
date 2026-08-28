@@ -1,6 +1,8 @@
 ﻿using Application.Features.ChatRoomInvites.Commands.AcceptChatRoomInvite;
 using Application.Features.ChatRoomInvites.Commands.CreateChatRoomInvite;
 using Application.Features.ChatRoomInvites.Commands.DeclineChatRoomInvite;
+using Application.Features.ChatRoomInvites.DTOs;
+using Application.Features.ChatRoomInvites.Queries.GetIncomingChatRoomInvites;
 using Application.Features.Users.DTOs;
 using Application.Features.Users.Queries.GetMyProfile;
 using Domain.Enums;
@@ -20,6 +22,23 @@ namespace WebApi.Controllers
     {
         private readonly ISender _sender;
         public ChatRoomInviteController(ISender sender) { _sender = sender; }
+
+        /// <summary>
+        /// Bana gelen bekleyen davetler (private + group). Kim attı, hangi şube, grupsa grup adı.
+        /// </summary>
+        [HttpGet("incoming")]
+        [ProducesResponseType(typeof(List<IncomingChatRoomInviteDto>), StatusCodes.Status200OK)]
+        public async Task<IActionResult> GetIncomingInvites(CancellationToken cancellationToken)
+        {
+            var user = await GetMyProfileDto();
+            if (user == null) return Unauthorized();
+
+            var invites = await _sender.Send(
+                new GetIncomingChatRoomInvitesQuery { InviteeUserId = user.Id },
+                cancellationToken);
+
+            return Ok(invites);
+        }
 
         /// <summary>
         /// Public odadan Private (geo'suz 1:1) veya Group (geo'lu) daveti.

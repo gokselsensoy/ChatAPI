@@ -29,5 +29,22 @@ namespace Infrastructure.Persistence.Repositories
                 .Include(i => i.ChatRoom)
                 .FirstOrDefaultAsync(i => i.Id == id, cancellationToken);
         }
+
+        public async Task<List<ChatRoomInvite>> GetPendingIncomingWithDetailsAsync(
+            Guid inviteeUserId,
+            CancellationToken cancellationToken = default)
+        {
+            return await _context.ChatRoomInvites
+                .AsNoTracking()
+                .Include(i => i.InviterUser)
+                .Include(i => i.ChatRoom)
+                    .ThenInclude(cr => cr.Branch)
+                .Where(i =>
+                    i.InviteeUserId == inviteeUserId
+                    && i.Status == InviteStatus.Pending
+                    && !i.IsDeleted)
+                .OrderByDescending(i => i.CreatedDate)
+                .ToListAsync(cancellationToken);
+        }
     }
 }
