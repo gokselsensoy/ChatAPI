@@ -1,5 +1,6 @@
 ﻿using Application.Abstractions.QueryRepositories;
 using Application.Features.Users.Commands.CheckOut;
+using Domain;
 using Domain.Entities;
 using Domain.Repositories;
 using Domain.SeedWork;
@@ -62,10 +63,9 @@ namespace Application.Features.Users.Commands.CheckOutControl
 
             var userPoint = new Point((double)request.Longitude, (double)request.Latitude) { SRID = 4326 };
 
-            // PostGIS mesafesi
-            double distanceInMeters = branch.Address.Location.Distance(userPoint) * 111195;
+            double distanceInMeters = GeoConstants.DistanceInMeters(branch.Address.Location, userPoint);
 
-            if (distanceInMeters > 100)
+            if (distanceInMeters > GeoConstants.CheckInRadiusInMeters)
             {
                 // DİKKAT: CheckOutCommand IdentityId beklediği için request.UserId gönderiyoruz!
                 await _mediator.Send(new CheckOutCommand { UserId = request.UserId }, cancellationToken);

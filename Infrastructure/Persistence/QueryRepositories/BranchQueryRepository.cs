@@ -3,6 +3,8 @@ using Application.Features.Branchs.DTOs;
 using Application.Shared.Pagination;
 using AutoMapper;
 using AutoMapper.QueryableExtensions;
+using Domain;
+using Domain.Entities;
 using Infrastructure.Persistence.Context;
 using Microsoft.EntityFrameworkCore;
 using NetTopologySuite.Geometries;
@@ -66,6 +68,7 @@ namespace Infrastructure.Persistence.QueryRepositories
     decimal longitude,
     int distanceInMeters,
     Guid? currentUserId,
+    IReadOnlyList<string>? tags,
     PaginatedRequest pagination,
     CancellationToken cancellationToken = default)
         {
@@ -93,6 +96,8 @@ namespace Infrastructure.Persistence.QueryRepositories
                                     true));
             }
 
+            query = ApplyTagFilter(query, tags);
+
             // 3. Mesafeye göre sırala
             query = query.OrderBy(b => b.Address.Location.Distance(userLocation));
 
@@ -115,7 +120,8 @@ namespace Infrastructure.Persistence.QueryRepositories
                 // A. Mesafe Hesaplama
                 // (PostGIS'ten gelen SRID: 4326 derece cinsinden döner, metreye çevirmek için ~111195 ile çarpıyoruz)
                 var branchLocation = new Point((double)item.Longitude, (double)item.Latitude) { SRID = 4326 };
-                item.DistanceInMeters = branchLocation.Distance(userLocation) * 111195;
+                item.DistanceInMeters = GeoConstants.DistanceInMeters(branchLocation, userLocation);
+                item.CanCheckIn = item.DistanceInMeters <= GeoConstants.CheckInRadiusInMeters;
 
                 // B. Doluluk Oranı (Şimdilik Mock Data)
                 int fullness = random.Next(1, 10) * 10; // 10, 20... 100
@@ -215,6 +221,27 @@ namespace Infrastructure.Persistence.QueryRepositories
             return await _context.Brands
                 .AsNoTracking()
                 .AnyAsync(b => b.OwnerUserId == userId, cancellationToken);
+        }
+
+        /// <summary>
+        /// Tags JSON string kolonunda, seçilen etiketlerden en az birini içeren şubeleri bırakır.
+        /// Null / boş liste / yalnızca boş string gelirse filtre uygulanmaz.
+        /// </summary>
+        private static IQueryable<Branch> ApplyTagFilter(IQueryable<Branch> query, IReadOnlyList<string>? tags)
+        {
+            var needles = tags?
+                .Where(t => !string.IsNullOrWhiteSpace(t))
+                .SelectMany(t => t.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+                .Where(t => t.Length > 0)
+                .Select(t => "\"" + t.ToLowerInvariant() + "\"")
+                .Distinct()
+                .ToList();
+
+            if (needles == null || needles.Count == 0)
+                return query;
+
+            return query.Where(b => needles.Any(n =>
+                EF.Property<string>(b, nameof(Branch.Tags)).ToLower().Contains(n)));
         }
     }
 }

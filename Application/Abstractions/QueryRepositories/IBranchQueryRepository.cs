@@ -18,7 +18,8 @@ namespace Application.Abstractions.QueryRepositories
             decimal longitude,
             int distanceInMeters,
             Guid? currentUserId,
-            PaginatedRequest pagination, // Pagination parametresi
+            IReadOnlyList<string>? tags,
+            PaginatedRequest pagination,
             CancellationToken cancellationToken = default);
 
         /// <summary>

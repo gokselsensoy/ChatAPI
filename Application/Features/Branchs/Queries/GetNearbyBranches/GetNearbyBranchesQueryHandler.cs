@@ -22,6 +22,7 @@ namespace Application.Features.Branchs.Queries.GetNearbyBranches
                 request.Longitude,
                 request.RadiusInMeters,
                 request.CurrentUserId,
+                request.Tags,
                 request, // Pagination bilgileri burada
                 cancellationToken
             );

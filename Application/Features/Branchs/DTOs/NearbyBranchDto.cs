@@ -27,5 +27,11 @@
         public string FullnessLabel { get; set; }
 
         public double DistanceInMeters { get; set; }
+
+        /// <summary>
+        /// Kullanıcı şubenin check-in yarıçapı (100m) içindeyse true.
+        /// Liste 1 km içindeki şubeleri döner; uzak olanlarda check-in yapılamaz.
+        /// </summary>
+        public bool CanCheckIn { get; set; }
     }
 }

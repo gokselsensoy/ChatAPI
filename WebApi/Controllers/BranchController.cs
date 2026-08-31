@@ -122,9 +122,10 @@ namespace WebApi.Controllers
 
         /// <summary>
         /// Belirtilen konuma yakın olan şubeleri mesafeye göre sıralı listeler.
+        /// Tags gönderilmezse veya boş/null ise etiket filtresi uygulanmaz.
         /// </summary>
         /// <remarks>
-        /// Rota: GET /api/branches/nearby?Latitude=40.71&Longitude=-74.00&RadiusInMeters=5000
+        /// Rota: GET /api/branches/nearby?Latitude=40.71&amp;Longitude=-74.00&amp;Tags=Kahve&amp;Tags=Canlı Müzik
         /// </remarks>
         [HttpGet("nearby")]
         [ProducesResponseType(typeof(List<NearbyBranchDto>), StatusCodes.Status200OK)]

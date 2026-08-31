@@ -1,9 +1,11 @@
-﻿using Application.Abstractions.QueryRepositories;
-using Application.Exceptions;
+﻿using Application.Exceptions;
+using Domain;
 using Domain.Entities;
+using Domain.Exceptions;
 using Domain.Repositories;
 using Domain.SeedWork;
 using MediatR;
+using NetTopologySuite.Geometries;
 
 namespace Application.Features.Users.Commands.CheckIn
 {
@@ -13,29 +15,28 @@ namespace Application.Features.Users.Commands.CheckIn
         private readonly IRepository<CheckInHistory> _historyRepository;
         private readonly IRepository<Branch> _branchRepository;
         private readonly IUnitOfWork _unitOfWork;
-        private readonly IUserQueryRepository _userQueryRepo;
 
         public CheckInCommandHandler(
             IRepository<UserLocation> userLocationRepository,
             IRepository<CheckInHistory> historyRepository,
             IRepository<Branch> branchRepository,
-            IUnitOfWork unitOfWork,
-            IUserQueryRepository userQueryRepo)
+            IUnitOfWork unitOfWork)
         {
             _userLocationRepository = userLocationRepository;
             _historyRepository = historyRepository;
             _branchRepository = branchRepository;
             _unitOfWork = unitOfWork;
-            _userQueryRepo = userQueryRepo;
         }
 
         public async Task<bool> Handle(CheckInCommand request, CancellationToken cancellationToken)
         {
-            // 1. Şube Kontrolü
-            var branchExists = await _branchRepository.AnyAsync(b => b.Id == request.BranchId, cancellationToken);
-            if (!branchExists)
+            var branch = await _branchRepository.GetByIdAsync(request.BranchId, cancellationToken);
+            if (branch == null)
                 throw new NotFoundException("Şube bulunamadı.", request.BranchId);
 
+            var userPoint = new Point((double)request.Longitude, (double)request.Latitude) { SRID = 4326 };
+            if (!GeoConstants.IsWithinCheckInRadius(branch.Address.Location, userPoint))
+                throw new UserDomainException("Bu şubeye check-in yapmak için daha yakında olmalısınız.");
 
             // 2. Mevcut Konumu Getir (Artık realUserId kullanıyoruz)
             var currentLocation = await _userLocationRepository.GetAsync(

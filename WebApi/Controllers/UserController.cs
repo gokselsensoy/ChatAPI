@@ -72,6 +72,7 @@ namespace WebApi.Controllers
 
         /// <summary>
         /// Kullanıcı bir şubeye giriş yapar (Check-In).
+        /// Kullanıcının mevcut konumu (Latitude/Longitude) şubenin 100m yarıçapı içinde olmalıdır.
         /// </summary>
         [HttpPost("check-in")]
         public async Task<IActionResult> CheckIn([FromBody] CheckInCommand command, CancellationToken cancellationToken)
@@ -102,7 +103,7 @@ namespace WebApi.Controllers
 
         /// <summary>
         /// Mobil uygulama arka planda bu endpoint'i çağırır.
-        /// Eğer kullanıcı 100m uzaklaşmışsa otomatik check-out yapılır.
+        /// Eğer kullanıcı check-in yarıçapının (100m) dışına çıkmışsa otomatik check-out yapılır.
         /// </summary>
         [HttpPost("check-out-control")]
         public async Task<IActionResult> CheckOutControl([FromBody] HeartbeatRequest request)

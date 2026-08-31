@@ -38,7 +38,8 @@ namespace Application.Mappings
                 .ForMember(dest => dest.ActiveEvent, opt => opt.MapFrom(src => false))
                 .ForMember(dest => dest.FullnessLevel, opt => opt.Ignore())
                 .ForMember(dest => dest.FullnessLabel, opt => opt.Ignore())
-                .ForMember(dest => dest.DistanceInMeters, opt => opt.Ignore());
+                .ForMember(dest => dest.DistanceInMeters, opt => opt.Ignore())
+                .ForMember(dest => dest.CanCheckIn, opt => opt.Ignore());
         }
     }
 }
