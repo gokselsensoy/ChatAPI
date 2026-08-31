@@ -1,10 +1,14 @@
-﻿using Application.Abstractions.QueryRepositories;
+using Application.Abstractions.QueryRepositories;
 using Application.Abstractions.Services;
 using Domain.Entities;
 using Domain.Enums;
 using Domain.Repositories;
 using Domain.SeedWork;
 using MediatR;
+using System;
+using System.Collections.Generic;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace Application.Features.ChatRoomInvites.Commands.CreateChatRoomInvite
 {
@@ -18,6 +22,8 @@ namespace Application.Features.ChatRoomInvites.Commands.CreateChatRoomInvite
         private readonly IBranchQueryRepository _branchQueryRepository;
         private readonly IUnitOfWork _unitOfWork;
         private readonly INotificationService _notificationService;
+        private readonly IPushNotificationService _pushNotificationService;
+        private readonly IUserDeviceTokenRepository _deviceTokenRepository;
 
         public CreateChatRoomInviteCommandHandler(
             IChatRoomInviteRepository inviteRepository,
@@ -25,7 +31,9 @@ namespace Application.Features.ChatRoomInvites.Commands.CreateChatRoomInvite
             IUserQueryRepository userQueryRepository,
             IBranchQueryRepository branchQueryRepository,
             IUnitOfWork unitOfWork,
-            INotificationService notificationService)
+            INotificationService notificationService,
+            IPushNotificationService pushNotificationService,
+            IUserDeviceTokenRepository deviceTokenRepository)
         {
             _inviteRepository = inviteRepository;
             _chatRoomRepository = chatRoomRepository;
@@ -33,6 +41,8 @@ namespace Application.Features.ChatRoomInvites.Commands.CreateChatRoomInvite
             _branchQueryRepository = branchQueryRepository;
             _unitOfWork = unitOfWork;
             _notificationService = notificationService;
+            _pushNotificationService = pushNotificationService;
+            _deviceTokenRepository = deviceTokenRepository;
         }
 
         public async Task<Guid> Handle(CreateChatRoomInviteCommand request, CancellationToken cancellationToken)
@@ -99,6 +109,29 @@ namespace Application.Features.ChatRoomInvites.Commands.CreateChatRoomInvite
                     BranchName = branch?.Name,
                     GroupName = groupName
                 });
+
+            var tokens = await _deviceTokenRepository.GetActiveTokensByUserIdsAsync(new[] { request.InviteeUserId }, cancellationToken);
+            if (tokens.Count > 0)
+            {
+                string inviterDisplayName = !string.IsNullOrWhiteSpace(inviterProfile?.FirstName) || !string.IsNullOrWhiteSpace(inviterProfile?.LastName)
+                    ? $"{inviterProfile.FirstName} {inviterProfile.LastName}".Trim()
+                    : (inviterProfile?.UserName ?? "Kullanıcı");
+
+                await _pushNotificationService.SendToTokensAsync(
+                    tokens,
+                    new PushMessage
+                    {
+                        Title = "Yeni Davet",
+                        Body = $"{inviterDisplayName} size bir sohbet daveti gönderdi.",
+                        Data = new Dictionary<string, string>
+                        {
+                            ["type"] = "invite",
+                            ["inviteId"] = invite.Id.ToString(),
+                            ["targetRoomType"] = request.TargetRoomType.ToString()
+                        }
+                    },
+                    cancellationToken);
+            }
 
             return invite.Id;
         }
