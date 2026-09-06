@@ -1,4 +1,4 @@
-﻿using Application.Abstractions.QueryRepositories;
+using Application.Abstractions.QueryRepositories;
 using Application.Features.Branchs.DTOs;
 using Application.Shared.Pagination;
 using AutoMapper;
@@ -133,6 +133,51 @@ namespace Infrastructure.Persistence.QueryRepositories
             }
 
             return new PaginatedResponse<NearbyBranchDto>(items, totalCount, pagination.PageNumber, pagination.PageSize);
+        }
+
+        public async Task<List<string>> GetAvailableTagsAsync(
+            decimal latitude,
+            decimal longitude,
+            int distanceInMeters,
+            Guid? currentUserId,
+            CancellationToken cancellationToken = default)
+        {
+            var userLocation = new Point((double)longitude, (double)latitude) { SRID = 4326 };
+
+            var skipGeoFilter = false;
+            if (currentUserId.HasValue)
+            {
+                var userId = currentUserId.Value;
+                skipGeoFilter = await _context.Brands.AsNoTracking().AnyAsync(b => b.OwnerUserId == userId, cancellationToken)
+                    || await _context.BranchAdminMaps.AsNoTracking().AnyAsync(m => m.UserId == userId, cancellationToken);
+            }
+
+            var query = _context.Branches.AsNoTracking().AsQueryable();
+            if (!skipGeoFilter)
+            {
+                query = query.Where(b => EF.Functions.IsWithinDistance(
+                                    b.Address.Location,
+                                    userLocation,
+                                    distanceInMeters,
+                                    true));
+            }
+
+            // Fetch the branches and select their Tags
+            var tagsList = await query
+                .Select(b => b.Tags)
+                .ToListAsync(cancellationToken);
+
+            // Flatten, clean, and distinct the tags
+            var uniqueTags = tagsList
+                .Where(t => t != null)
+                .SelectMany(t => t)
+                .Select(t => t.Value)
+                .Where(v => !string.IsNullOrWhiteSpace(v))
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .OrderBy(t => t)
+                .ToList();
+
+            return uniqueTags;
         }
 
         public async Task<bool> CanUserManageBranchAsync(Guid userId, Guid branchId, CancellationToken cancellationToken = default)

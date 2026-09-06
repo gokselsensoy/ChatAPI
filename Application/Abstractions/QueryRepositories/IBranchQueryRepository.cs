@@ -1,4 +1,4 @@
-﻿using Application.Features.Branchs.DTOs;
+using Application.Features.Branchs.DTOs;
 using Application.Shared.Pagination;
 using System.Collections.Generic;
 
@@ -20,6 +20,13 @@ namespace Application.Abstractions.QueryRepositories
             Guid? currentUserId,
             IReadOnlyList<string>? tags,
             PaginatedRequest pagination,
+            CancellationToken cancellationToken = default);
+
+        Task<List<string>> GetAvailableTagsAsync(
+            decimal latitude,
+            decimal longitude,
+            int distanceInMeters,
+            Guid? currentUserId,
             CancellationToken cancellationToken = default);
 
         /// <summary>
