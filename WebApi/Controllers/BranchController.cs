@@ -1,4 +1,4 @@
-﻿using Application.Abstractions.QueryRepositories;
+using Application.Abstractions.QueryRepositories;
 using Application.Features.Branchs.Commands.AssignBranchAdmin;
 using Application.Features.Branchs.Commands.CreateBranch;
 using Application.Features.Branchs.Commands.RemoveBranchAdmin;
@@ -136,6 +136,22 @@ namespace WebApi.Controllers
             var branches = await _sender.Send(query, cancellationToken);
             return Ok(branches);
         }
+
+        /// <summary>
+        /// Belirtilen konuma yakın olan şubelerin kullandığı benzersiz etiketleri döner.
+        /// </summary>
+        /// <remarks>
+        /// Rota: GET /api/branches/tags?Latitude=40.71&amp;Longitude=-74.00
+        /// </remarks>
+        [HttpGet("tags")]
+        [ProducesResponseType(typeof(List<string>), StatusCodes.Status200OK)]
+        public async Task<IActionResult> GetAvailableTags([FromQuery] Application.Features.Branchs.Queries.GetAvailableTags.GetAvailableTagsQuery query, CancellationToken cancellationToken)
+        {
+            query.CurrentUserId = await GetActingDomainUserIdAsync(cancellationToken);
+            var tags = await _sender.Send(query, cancellationToken);
+            return Ok(tags);
+        }
+
 
         /// <summary>
         /// Şube yöneticilerini listeler (marka sahibi + BranchAdminMap ile atanmış kullanıcılar).
