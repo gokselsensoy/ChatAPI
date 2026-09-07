@@ -1,4 +1,4 @@
-﻿using Domain.SeedWork;
+using Domain.SeedWork;
 
 namespace Domain.ValueObjects
 {
@@ -26,6 +26,9 @@ namespace Domain.ValueObjects
                 throw new ArgumentException("Etiket 30 karakterden uzun olamaz.");
 
             // İsteğe bağlı: Her kelimenin ilk harfini büyüt (Title Case) yapabilirsin.
+
+            if (!Domain.Constants.PredefinedTags.Tags.Contains(trimmedValue, StringComparer.OrdinalIgnoreCase))
+                throw new ArgumentException($"'{trimmedValue}' geçerli bir etiket değil. Lütfen listedeki etiketlerden birini seçin.");
 
             return new Tag(trimmedValue);
         }
