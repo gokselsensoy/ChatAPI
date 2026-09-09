@@ -5,6 +5,7 @@ using AutoMapper;
 using AutoMapper.QueryableExtensions;
 using Domain;
 using Domain.Entities;
+using Domain.Enums;
 using Infrastructure.Persistence.Context;
 using Microsoft.EntityFrameworkCore;
 using NetTopologySuite.Geometries;
@@ -68,7 +69,7 @@ namespace Infrastructure.Persistence.QueryRepositories
     decimal longitude,
     int distanceInMeters,
     Guid? currentUserId,
-    IReadOnlyList<string>? tags,
+    IReadOnlyList<BranchTag>? tags,
     PaginatedRequest pagination,
     CancellationToken cancellationToken = default)
         {
@@ -228,7 +229,7 @@ namespace Infrastructure.Persistence.QueryRepositories
         /// <summary>
         /// Tags Enum array kolonunda, seçilen etiketlerden en az birini içeren şubeleri bırakır.
         /// </summary>
-        private static IQueryable<Branch> ApplyTagFilter(IQueryable<Branch> query, IReadOnlyList<Domain.Enums.BranchTag>? tags)
+        private static IQueryable<Branch> ApplyTagFilter(IQueryable<Branch> query, IReadOnlyList<BranchTag>? tags)
         {
             if (tags == null || tags.Count == 0)
                 return query;

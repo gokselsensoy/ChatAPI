@@ -14,7 +14,7 @@ namespace Application.Features.Branchs.Queries.GetNearbyBranches
 
         /// <summary>
         /// Şube etiketlerine göre filtre. Null, boş veya gönderilmezse tüm şubeler döner.
-        /// Örnek: Tags=Kahve&amp;Tags=Canlı Müzik
+        /// Örnek: Tags=Kahve&amp;Tags=CanliMuzik
         /// </summary>
         public List<BranchTag>? Tags { get; set; }
 

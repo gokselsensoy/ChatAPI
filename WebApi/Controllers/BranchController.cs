@@ -125,7 +125,7 @@ namespace WebApi.Controllers
         /// Tags gönderilmezse veya boş/null ise etiket filtresi uygulanmaz.
         /// </summary>
         /// <remarks>
-        /// Rota: GET /api/branches/nearby?Latitude=40.71&amp;Longitude=-74.00&amp;Tags=Kahve&amp;Tags=Canlı Müzik
+        /// Rota: GET /api/branches/nearby?Latitude=40.71&amp;Longitude=-74.00&amp;Tags=Kahve&amp;Tags=CanliMuzik
         /// </remarks>
         [HttpGet("nearby")]
         [ProducesResponseType(typeof(List<NearbyBranchDto>), StatusCodes.Status200OK)]

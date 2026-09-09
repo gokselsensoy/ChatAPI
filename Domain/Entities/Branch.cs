@@ -2,6 +2,7 @@ using Domain.Enums;
 using Domain.Events.BranchEvents;
 using Domain.Exceptions;
 using Domain.SeedWork;
+using Domain.ValueObjects;
 
 namespace Domain.Entities
 {

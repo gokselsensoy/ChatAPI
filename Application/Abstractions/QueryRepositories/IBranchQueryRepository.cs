@@ -1,5 +1,6 @@
 using Application.Features.Branchs.DTOs;
 using Application.Shared.Pagination;
+using Domain.Enums;
 using System.Collections.Generic;
 
 namespace Application.Abstractions.QueryRepositories
@@ -18,7 +19,7 @@ namespace Application.Abstractions.QueryRepositories
             decimal longitude,
             int distanceInMeters,
             Guid? currentUserId,
-            IReadOnlyList<string>? tags,
+            IReadOnlyList<BranchTag>? tags,
             PaginatedRequest pagination,
             CancellationToken cancellationToken = default);
 
