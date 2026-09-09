@@ -1,4 +1,4 @@
-﻿using Application.Features.Branchs.DTOs;
+using Application.Features.Branchs.DTOs;
 using AutoMapper;
 using Domain.Entities;
 
@@ -19,8 +19,7 @@ namespace Application.Mappings
                 .ForMember(dest => dest.ZipCode, opt => opt.MapFrom(src => src.Address.ZipCode))
                 .ForMember(dest => dest.Latitude, opt => opt.MapFrom(src => (decimal)src.Address.Location.Y))
                 .ForMember(dest => dest.Longitude, opt => opt.MapFrom(src => (decimal)src.Address.Location.X))
-                .ForMember(dest => dest.Tags, opt => opt.MapFrom(src =>
-                src.Tags.Select(t => t.Value).ToList()));
+                .ForMember(dest => dest.Tags, opt => opt.MapFrom(src => src.Tags.ToList()));
 
             CreateMap<Branch, NearbyBranchDto>()
                 .ForMember(dest => dest.Country, opt => opt.MapFrom(src => src.Address.Country))
@@ -33,7 +32,7 @@ namespace Application.Mappings
                 .ForMember(dest => dest.ZipCode, opt => opt.MapFrom(src => src.Address.ZipCode))
                 .ForMember(dest => dest.Latitude, opt => opt.MapFrom(src => (decimal)src.Address.Location.Y))
                 .ForMember(dest => dest.Longitude, opt => opt.MapFrom(src => (decimal)src.Address.Location.X))
-                .ForMember(dest => dest.Tags, opt => opt.MapFrom(src => src.Tags.Select(t => t.Value).ToList()))
+                .ForMember(dest => dest.Tags, opt => opt.MapFrom(src => src.Tags.ToList()))
                 .ForMember(dest => dest.ActivePool, opt => opt.MapFrom(src => false))
                 .ForMember(dest => dest.ActiveEvent, opt => opt.MapFrom(src => false))
                 .ForMember(dest => dest.FullnessLevel, opt => opt.Ignore())

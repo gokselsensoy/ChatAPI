@@ -1,14 +1,15 @@
-﻿namespace Application.Features.Branchs.DTOs
+using Domain.Enums;
+
+namespace Application.Features.Branchs.DTOs
 {
     public class NearbyBranchDto
     {
-        // BranchDto'dan gelen tüm alanlar
         public Guid Id { get; set; }
         public Guid BrandId { get; set; }
         public string Name { get; set; }
         public string? FileId { get; set; }
         public string BranchType { get; set; }
-        public List<string> Tags { get; set; } = new List<string>();
+        public List<BranchTag> Tags { get; set; } = new List<BranchTag>();
         public string Country { get; set; }
         public string City { get; set; }
         public string District { get; set; }

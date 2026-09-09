@@ -1,8 +1,7 @@
-﻿using Domain.Enums;
+using Domain.Enums;
 using Domain.Events.BranchEvents;
 using Domain.Exceptions;
 using Domain.SeedWork;
-using Domain.ValueObjects;
 
 namespace Domain.Entities
 {
@@ -14,8 +13,8 @@ namespace Domain.Entities
         public BranchType BranchType { get; private set; }
         public Guid BrandId { get; private set; }
 
-        private readonly List<Tag> _tags = new(); // <--- DİKKAT: Tag olmalı
-        public IReadOnlyCollection<Tag> Tags => _tags.AsReadOnly();
+        private readonly List<BranchTag> _tags = new(); // <--- DİKKAT: BranchTag olmalı
+        public IReadOnlyCollection<BranchTag> Tags => _tags.AsReadOnly();
 
         // Navigations
         public Brand? Brand { get; private set; }
@@ -33,7 +32,7 @@ namespace Domain.Entities
             Address address, // Adres VO'su dışarıda oluşturulup buraya verilir
             BranchType branchType,
             string? fileId = null,
-            IEnumerable<string>? tags = null)
+            IEnumerable<BranchTag>? tags = null)
         {
             if (string.IsNullOrWhiteSpace(name))
                 throw new BranchDomainException("Şube adı (Name) boş olamaz.");
@@ -60,15 +59,7 @@ namespace Domain.Entities
 
             if (tags != null && tags.Any())
             {
-                // 1. Önce stringleri temizle (boş olanları at)
-                // 2. Tag Value Object'ine çevir
-                // 3. Tekrarları engelle (Distinct - Tag objesinin Equals metodu sayesinde çalışır)
-                var tagObjects = tags
-                    .Where(t => !string.IsNullOrWhiteSpace(t))
-                    .Select(t => Tag.Create(t))
-                    .Distinct();
-
-                branch._tags.AddRange(tagObjects);
+                branch._tags.AddRange(tags.Distinct());
             }
 
             branch.AddDomainEvent(new BranchCreatedDomainEvent(branch.Id, branch.BrandId, branch.Name));
@@ -82,7 +73,7 @@ namespace Domain.Entities
             Address address,
             BranchType branchType,
             string? fileId,
-            IEnumerable<string>? tags = null)
+            IEnumerable<BranchTag>? tags = null)
         {
             // Validationlar
             if (string.IsNullOrWhiteSpace(name))
@@ -106,15 +97,7 @@ namespace Domain.Entities
             _tags.Clear();
             if (tags != null && tags.Any())
             {
-                // 1. Önce stringleri temizle (boş olanları at)
-                // 2. Tag Value Object'ine çevir
-                // 3. Tekrarları engelle (Distinct - Tag objesinin Equals metodu sayesinde çalışır)
-                var tagObjects = tags
-                    .Where(t => !string.IsNullOrWhiteSpace(t))
-                    .Select(t => Tag.Create(t))
-                    .Distinct();
-
-                _tags.AddRange(tagObjects);
+                _tags.AddRange(tags.Distinct());
             }
 
             // Event fırlat

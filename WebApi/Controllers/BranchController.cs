@@ -137,36 +137,6 @@ namespace WebApi.Controllers
             return Ok(branches);
         }
 
-        /// <summary>
-        /// Belirtilen konuma yakın olan şubelerin kullandığı benzersiz etiketleri döner.
-        /// </summary>
-        /// <remarks>
-        /// Rota: GET /api/branches/tags?Latitude=40.71&amp;Longitude=-74.00
-        /// </remarks>
-        [HttpGet("tags")]
-        [ProducesResponseType(typeof(List<string>), StatusCodes.Status200OK)]
-        public async Task<IActionResult> GetAvailableTags([FromQuery] Application.Features.Branchs.Queries.GetAvailableTags.GetAvailableTagsQuery query, CancellationToken cancellationToken)
-        {
-            query.CurrentUserId = await GetActingDomainUserIdAsync(cancellationToken);
-            var tags = await _sender.Send(query, cancellationToken);
-            return Ok(tags);
-        }
-
-        /// <summary>
-        /// Sistemde tanımlı olan önceden belirlenmiş etiketleri döner.
-        /// </summary>
-        /// <remarks>
-        /// Rota: GET /api/branches/predefined-tags
-        /// </remarks>
-        [HttpGet("predefined-tags")]
-        [ProducesResponseType(typeof(List<string>), StatusCodes.Status200OK)]
-        public async Task<IActionResult> GetPredefinedTags(CancellationToken cancellationToken)
-        {
-            var query = new Application.Features.Branchs.Queries.GetPredefinedTags.GetPredefinedTagsQuery();
-            var tags = await _sender.Send(query, cancellationToken);
-            return Ok(tags);
-        }
-
 
         /// <summary>
         /// Şube yöneticilerini listeler (marka sahibi + BranchAdminMap ile atanmış kullanıcılar).

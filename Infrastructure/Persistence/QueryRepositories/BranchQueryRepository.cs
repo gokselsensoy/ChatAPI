@@ -135,50 +135,7 @@ namespace Infrastructure.Persistence.QueryRepositories
             return new PaginatedResponse<NearbyBranchDto>(items, totalCount, pagination.PageNumber, pagination.PageSize);
         }
 
-        public async Task<List<string>> GetAvailableTagsAsync(
-            decimal latitude,
-            decimal longitude,
-            int distanceInMeters,
-            Guid? currentUserId,
-            CancellationToken cancellationToken = default)
-        {
-            var userLocation = new Point((double)longitude, (double)latitude) { SRID = 4326 };
 
-            var skipGeoFilter = false;
-            if (currentUserId.HasValue)
-            {
-                var userId = currentUserId.Value;
-                skipGeoFilter = await _context.Brands.AsNoTracking().AnyAsync(b => b.OwnerUserId == userId, cancellationToken)
-                    || await _context.BranchAdminMaps.AsNoTracking().AnyAsync(m => m.UserId == userId, cancellationToken);
-            }
-
-            var query = _context.Branches.AsNoTracking().AsQueryable();
-            if (!skipGeoFilter)
-            {
-                query = query.Where(b => EF.Functions.IsWithinDistance(
-                                    b.Address.Location,
-                                    userLocation,
-                                    distanceInMeters,
-                                    true));
-            }
-
-            // Fetch the branches and select their Tags
-            var tagsList = await query
-                .Select(b => b.Tags)
-                .ToListAsync(cancellationToken);
-
-            // Flatten, clean, and distinct the tags
-            var uniqueTags = tagsList
-                .Where(t => t != null)
-                .SelectMany(t => t)
-                .Select(t => t.Value)
-                .Where(v => !string.IsNullOrWhiteSpace(v))
-                .Distinct(StringComparer.OrdinalIgnoreCase)
-                .OrderBy(t => t)
-                .ToList();
-
-            return uniqueTags;
-        }
 
         public async Task<bool> CanUserManageBranchAsync(Guid userId, Guid branchId, CancellationToken cancellationToken = default)
         {
@@ -269,24 +226,15 @@ namespace Infrastructure.Persistence.QueryRepositories
         }
 
         /// <summary>
-        /// Tags JSON string kolonunda, seçilen etiketlerden en az birini içeren şubeleri bırakır.
-        /// Null / boş liste / yalnızca boş string gelirse filtre uygulanmaz.
+        /// Tags Enum array kolonunda, seçilen etiketlerden en az birini içeren şubeleri bırakır.
         /// </summary>
-        private static IQueryable<Branch> ApplyTagFilter(IQueryable<Branch> query, IReadOnlyList<string>? tags)
+        private static IQueryable<Branch> ApplyTagFilter(IQueryable<Branch> query, IReadOnlyList<Domain.Enums.BranchTag>? tags)
         {
-            var needles = tags?
-                .Where(t => !string.IsNullOrWhiteSpace(t))
-                .SelectMany(t => t.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
-                .Where(t => t.Length > 0)
-                .Select(t => "\"" + t.ToLowerInvariant() + "\"")
-                .Distinct()
-                .ToList();
-
-            if (needles == null || needles.Count == 0)
+            if (tags == null || tags.Count == 0)
                 return query;
 
-            return query.Where(b => needles.Any(n =>
-                EF.Property<string>(b, nameof(Branch.Tags)).ToLower().Contains(n)));
+            // PostgreSQL'de array operasyonları (Any) için EF Core 8 desteği kullanılıyor
+            return query.Where(b => b.Tags.Any(t => tags.Contains(t)));
         }
     }
 }
