@@ -22,12 +22,7 @@ namespace Application.Abstractions.QueryRepositories
             PaginatedRequest pagination,
             CancellationToken cancellationToken = default);
 
-        Task<List<string>> GetAvailableTagsAsync(
-            decimal latitude,
-            decimal longitude,
-            int distanceInMeters,
-            Guid? currentUserId,
-            CancellationToken cancellationToken = default);
+
 
         /// <summary>
         /// Marka sahibi veya şube admini (BranchAdminMap) ise true döner.

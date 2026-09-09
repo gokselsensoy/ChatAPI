@@ -1,10 +1,6 @@
-﻿using Domain.Entities;
-using Domain.ValueObjects;
+using Domain.Entities;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.ChangeTracking;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
-using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
-using System.Text.Json;
 
 namespace Infrastructure.Persistence.Configurations
 {
@@ -37,28 +33,8 @@ namespace Infrastructure.Persistence.Configurations
                         .HasColumnType("geometry(Point)");
             });
 
-            var tagConverter = new ValueConverter<IReadOnlyCollection<Tag>, string>(
-                // 1. C# -> DB (Yazarken sorun yok)
-                v => JsonSerializer.Serialize(v.Select(t => t.Value).ToList(), (JsonSerializerOptions)null),
-
-                // 2. DB -> C# (OKURKEN GÜVENLİK EKLENDİ)
-                v => string.IsNullOrWhiteSpace(v)
-                        ? new List<Tag>() // EĞER DB'DEN GELEN VERİ BOŞSA, PATLAMA, DİREKT BOŞ LİSTE DÖN!
-                        : (JsonSerializer.Deserialize<List<string>>(v, (JsonSerializerOptions)null) ?? new List<string>())
-                            .Select(s => Tag.Create(s)).ToList()
-            );
-
-            // 2. Comparer'ı ayrı bir nesne olarak tanımlıyoruz
-            var tagComparer = new ValueComparer<IReadOnlyCollection<Tag>>(
-                (c1, c2) => c1.SequenceEqual(c2),
-                c => c.Aggregate(0, (a, v) => HashCode.Combine(a, v.GetHashCode())),
-                c => c.ToList().AsReadOnly()
-            );
-
-            // 3. Property'ye bu hazır nesneleri veriyoruz
             builder.Property(b => b.Tags)
-                .HasConversion(tagConverter) // <--- ARTIK HATA VERMEYECEK
-                .Metadata.SetValueComparer(tagComparer);
+                .HasColumnType("integer[]");
 
             builder.Metadata.FindNavigation(nameof(Branch.Tags))
                 ?.SetPropertyAccessMode(PropertyAccessMode.Field);

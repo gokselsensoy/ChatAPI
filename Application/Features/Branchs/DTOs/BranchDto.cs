@@ -1,4 +1,4 @@
-﻿using Domain.Enums;
+using Domain.Enums;
 
 namespace Application.Features.Branchs.DTOs
 {
@@ -9,7 +9,7 @@ namespace Application.Features.Branchs.DTOs
         public string Name { get; set; }
         public string? FileId { get; set; }
         public BranchType BranchType { get; set; }
-        public List<string> Tags { get; set; } = new List<string>();
+        public List<BranchTag> Tags { get; set; } = new List<BranchTag>();
 
         // Adres bilgileri (flattened)
         public string Country { get; set; }
