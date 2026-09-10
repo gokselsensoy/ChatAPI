@@ -68,7 +68,7 @@ namespace Infrastructure.Persistence.QueryRepositories
     decimal longitude,
     int distanceInMeters,
     Guid? currentUserId,
-    IReadOnlyList<string>? tags,
+    IReadOnlyList<Domain.Enums.BranchTag>? tags,
     PaginatedRequest pagination,
     CancellationToken cancellationToken = default)
         {
