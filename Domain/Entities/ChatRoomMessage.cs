@@ -14,6 +14,7 @@ namespace Domain.Entities
         public ChatRoom? ChatRoom { get; private set; }
         public User? SenderUser { get; private set; }
         public ChatRoomMessage? ReplyToMessage { get; private set; }
+        public ICollection<MessageReaction> Reactions {get; private set;} = new List<MessageReaction>();
 
         private ChatRoomMessage() { }
 
@@ -35,6 +36,24 @@ namespace Domain.Entities
                 ReplyToMessageId = replyToMessageId,
                 CreatedDate = DateTime.UtcNow
             };
+        }
+
+        public void AddReaction(Guid userId, string emoji)
+        {
+            // İş kuralı: Aynı kullanıcı, aynı mesaja, aynı emojiyi zaten bırakmışsa tekrar ekleme
+            if (Reactions.Any(r => r.UserId == userId && r.Emoji == emoji))
+                return;
+
+            Reactions.Add(MessageReaction.Create(Id, userId, emoji))
+        }
+
+        public void RemoveReaction(Guid userId, string emoji)
+        {
+            var reaction = Reactions.FirstOrDefault(r => r.UserId == userId && r.Emoji == emoji);
+            if(reaction != null)
+            {
+                Reactions.Remove(reaction);
+            }
         }
     }
 }
