@@ -29,6 +29,7 @@ namespace Infrastructure.Persistence.Repositories
         {
             return await _context.ChatRoomMessages
                 .Include(m => m.SenderUser)
+                .Include(m => m.Reactions) // Bunun sayesinde mesaj gelirken reaksiyonlarıda getirecek
                 .FirstOrDefaultAsync(m => m.Id == messageId && !m.IsDeleted, cancellationToken);
         }
 
