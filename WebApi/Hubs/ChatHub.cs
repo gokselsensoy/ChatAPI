@@ -1,6 +1,8 @@
 ﻿using Application.Abstractions.QueryRepositories;
 using Application.Abstractions.Services;
 using Application.Features.Users.DTOs;
+using Application.Features.ChatRooms.Commands.ToggleReaction;
+using MediatR;
 using Domain.Entities;
 using Domain.Repositories;
 using Domain.SeedWork;
@@ -11,6 +13,9 @@ using System.Security.Claims;
 namespace WebApi.Hubs
 {
     [Authorize]
+
+    private readonly ISender _sender;
+
     public class ChatHub : Hub
     {
         private readonly IUserQueryRepository _userQueryRepository;
@@ -21,6 +26,7 @@ namespace WebApi.Hubs
         private readonly IPresenceService _presenceService;
         private readonly INotificationService _notificationService;
         private readonly IUnitOfWork _unitOfWork;
+        private readonly ISender _sender;
 
         public ChatHub(
             IUserQueryRepository userQueryRepository,
@@ -130,15 +136,12 @@ namespace WebApi.Hubs
                 throw new HubException("Geçersiz roomId.");
 
             var currentUser = await GetCurrentUserAsync();
-            if (currentUser == null)
-                throw new HubException("Kullanıcı doğrulanamadı.");
+            if (currentUser == null) throw new HubException("Kullanıcı doğrulanamadı.");
 
             var room = await _chatRoomRepository.GetByIdWithUsersAsync(roomGuid, Context.ConnectionAborted);
-            if (room == null)
-                throw new HubException("Oda bulunamadı.");
+            if (room == null) throw new HubException("Oda bulunamadı.");
 
-            if (!await CanCurrentUserJoinRoomAsync(currentUser.Id, room))
-                throw new HubException("Bu odaya katılma yetkiniz yok.");
+            if (!await CanCurrentUserJoinRoomAsync(currentUser.Id, room)) throw new HubException("Bu odaya katılma yetkiniz yok.");
 
             await Groups.AddToGroupAsync(Context.ConnectionId, $"chatroom:{roomId}");
         }
@@ -146,6 +149,37 @@ namespace WebApi.Hubs
         public async Task LeaveRoomGroup(string roomId)
         {
             await Groups.RemoveFromGroupAsync(Context.ConnectionId, $"chatroom:{roomId}");
+        }
+
+        public async Task ToggleReaction(string messageId, string emoji)
+        {
+            if (!Guid.TryParse(messageId, out var messageGuid)) throw new HubException("Geçersiz mesaj formatı!");
+
+            if (string.IsNullOrWhiteSpace(emoji)) throw new HubException("EMoji boş olamaz.");
+
+            var currentUser = await GetCurrentUserAsync();
+            if (currentUser == null) throw new HubException("Kullanıcı doğrulanamadı.");
+
+            var command = new ToggleReactionCommand
+            {
+                MessageId = messageGuid,
+                Emoji = emoji,
+                UserId = currentUser.Id
+            };
+
+            try
+            {
+                //İş kuralını MediatR'a devrediyoruz.
+                await _sender.Send(command);
+            }
+            catch (DomainException ex)
+            {
+                throw new HubException(ex.Message);
+            }
+            catch (Exception ex)
+            {
+                throw new HubException("Reaction işlenirken beklenmeyen bir hata oluştu.");
+            }
         }
 
         private async Task NotifySharedPeersAsync(Guid userId, bool isOnline, DateTime? lastSeenAt)
