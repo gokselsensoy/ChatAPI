@@ -10,13 +10,11 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.SignalR;
 using System.Security.Claims;
 using Application.Features.ChatRooms.Queries.CheckUserRoomAccess;
+using Application.Features.Users.Commands.UpdateUserLastSeen;
 
 namespace WebApi.Hubs
 {
     [Authorize]
-
-    private readonly ISender _sender;
-
     public class ChatHub : Hub
     {
         private readonly IUserQueryRepository _userQueryRepository;
@@ -30,20 +28,10 @@ namespace WebApi.Hubs
         private readonly ISender _sender;
 
         public ChatHub(
-            IUserQueryRepository userQueryRepository,
-            IUserRepository userRepository,
-            IChatRoomRepository chatRoomRepository,
-            IUserLocationQueryRepository userLocationQueryRepository,
-            IBranchQueryRepository branchQueryRepository,
             IPresenceService presenceService,
             INotificationService notificationService,
             IUnitOfWork unitOfWork)
         {
-            _userQueryRepository = userQueryRepository;
-            _userRepository = userRepository;
-            _chatRoomRepository = chatRoomRepository;
-            _userLocationQueryRepository = userLocationQueryRepository;
-            _branchQueryRepository = branchQueryRepository;
             _presenceService = presenceService;
             _notificationService = notificationService;
             _unitOfWork = unitOfWork;
@@ -76,7 +64,7 @@ namespace WebApi.Hubs
                 var becameOffline = _presenceService.SetOffline(currentUser.Id);
                 if (becameOffline)
                 {
-                    var lastSeen = await _sender.Send(new GetLastSeenCommand { UserId = currentUser.Id }, Context.ConnectionAborted);
+                    var lastSeen = await _sender.Send(new UpdateUserLastSeenCommand { UserId = currentUser.Id }, Context.ConnectionAborted);
                     await NotifySharedPeersAsync(currentUser.Id, isOnline: false, lastSeenAt: lastSeen ?? DateTime.UtcNow);
                 }
             }
@@ -112,7 +100,14 @@ namespace WebApi.Hubs
             if (currentUser == null)
                 throw new HubException("Kullanıcı doğrulanamadı.");
 
-            if (!await CanJoinBranchChannelAsync(currentUser.Id, branchGuid))
+            // Şube yetki kontrolünü MediatR'daki Query üzerinden arka planda yapıyoruz
+            var hasAccess = await _sender.Send(new Application.Features.Branches.Queries.CheckUserBranchAccess.CheckUserBranchAccessQuery
+            {
+                UserId = currentUser.Id,
+                BranchId = branchGuid
+            }, Context.ConnectionAborted);
+
+            if (!hasAccess)
                 throw new HubException("Bu şube kanalına katılma yetkiniz yok. Check-in yapın veya yönetici olun.");
 
             await Groups.AddToGroupAsync(Context.ConnectionId, $"branch:{branchId}");
@@ -125,22 +120,25 @@ namespace WebApi.Hubs
 
         public async Task JoinRoomGroup(string roomId)
         {
-            if (!Guid.TryParse(roomId, out var roomGuid)) throw new HubException("Geçersiz roomId.");
-
+            if (!Guid.TryParse(roomId, out var roomGuid))
+                throw new HubException("Geçersiz roomId.");
             var currentUser = await GetCurrentUserAsync();
-            if (currentUser == null) throw new HubException("Kullanıcı doğrulanamadı.");
-
+            if (currentUser == null)
+                throw new HubException("Kullanıcı doğrulanamadı.");
             try
             {
-                var hasAccess = await _sender.Send(new CheckUserRoomAccessQuery { RoomId = roomGuid, UserId = currentUser.Id }, Context.ConnectionAborted);
-
-                if (!hasAccess) throw new HubException("Bu odaya katılma yetkiniz yok.");
+                var hasAccess = await _sender.Send(new CheckUserRoomAccessQuery
+                {
+                    RoomId = roomGuid,
+                    UserId = currentUser.Id
+                }, Context.ConnectionAborted);
+                if (!hasAccess)
+                    throw new HubException("Bu odaya katılma yetkiniz yok.");
             }
             catch (Exception ex)
             {
                 throw new HubException(ex.Message);
             }
-
             await Groups.AddToGroupAsync(Context.ConnectionId, $"chatroom:{roomId}");
         }
 
@@ -182,12 +180,13 @@ namespace WebApi.Hubs
 
         private async Task NotifySharedPeersAsync(Guid userId, bool isOnline, DateTime? lastSeenAt)
         {
-            var peerUserIds = await _chatRoomRepository.GetSharedRoomPeerUserIdsAsync(userId, Context.ConnectionAborted);
-            if (peerUserIds.Count == 0)
-                return;
+            var identityIds = await _sender.Send(new Application.Features.Users.Queries.GetSharedPeersIdentityIds.GetSharedPeersIdentityIdsQuery
+            {
+                UserId = userId
+            }, Context.ConnectionAborted);
 
-            var identityMap = await _userQueryRepository.GetIdentityIdsByUserIdsAsync(peerUserIds, Context.ConnectionAborted);
-            var identityIds = identityMap.Values.Select(id => id.ToString()).ToList();
+            if (identityIds == null || identityIds.Count == 0)
+                return;
 
             await _notificationService.SendNotificationToUsersAsync(
                 identityIds,
@@ -202,31 +201,15 @@ namespace WebApi.Hubs
         private async Task<UserDto?> GetCurrentUserAsync()
         {
             var identityIdClaim = GetIdentityIdString();
+
             if (string.IsNullOrWhiteSpace(identityIdClaim) || !Guid.TryParse(identityIdClaim, out var identityId))
                 return null;
 
-            return await _userQueryRepository.GetByIdentityIdAsync(identityId, Context.ConnectionAborted);
-        }
-
-        private async Task<bool> CanJoinBranchChannelAsync(Guid userId, Guid branchId)
-        {
-            var location = await _userLocationQueryRepository.GetActiveLocationByUserIdAsync(userId, Context.ConnectionAborted);
-            if (location != null && location.BranchId == branchId)
-                return true;
-
-            return await _branchQueryRepository.CanUserManageBranchAsync(userId, branchId, Context.ConnectionAborted);
-        }
-
-        private async Task<bool> CanCurrentUserJoinRoomAsync(Guid userId, ChatRoom room)
-        {
-            if (room.IsMemberOnlyRoom)
-                return room.ChatRoomUserMaps.Any(m => m.UserId == userId);
-
-            var location = await _userLocationQueryRepository.GetActiveLocationByUserIdAsync(userId, Context.ConnectionAborted);
-            if (location != null && location.BranchId == room.BranchId)
-                return true;
-
-            return await _branchQueryRepository.CanUserManageBranchAsync(userId, room.BranchId, Context.ConnectionAborted);
+            // MediatR üzerinden okuma işlemini yap
+            return await _sender.Send(new Application.Features.Users.Queries.GetUserByIdentityId.GetUserByIdentityIdQuery
+            {
+                IdentityId = identityId
+            }, Context.ConnectionAborted);
         }
     }
 }
