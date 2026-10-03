@@ -9,6 +9,7 @@ using Domain.SeedWork;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.SignalR;
 using System.Security.Claims;
+using Application.Features.ChatRooms.Queries.CheckUserRoomAccess;
 
 namespace WebApi.Hubs
 {
@@ -129,10 +130,16 @@ namespace WebApi.Hubs
             var currentUser = await GetCurrentUserAsync();
             if (currentUser == null) throw new HubException("Kullanıcı doğrulanamadı.");
 
-            var room = await _chatRoomRepository.GetByIdWithUsersAsync(roomGuid, Context.ConnectionAborted);
-            if (room == null) throw new HubException("Oda bulunamadı.");
+            try
+            {
+                var hasAccess = await _sender.Send(new CheckUserRoomAccessQuery { RoomId = roomGuid, UserId = currentUser.Id }, Context.ConnectionAborted);
 
-            if (!await CanCurrentUserJoinRoomAsync(currentUser.Id, room)) throw new HubException("Bu odaya katılma yetkiniz yok.");
+                if (!hasAccess) throw new HubException("Bu odaya katılma yetkiniz yok.");
+            }
+            catch (Exception ex)
+            {
+                throw new HubException(ex.Message);
+            }
 
             await Groups.AddToGroupAsync(Context.ConnectionId, $"chatroom:{roomId}");
         }

@@ -1,5 +1,3 @@
-using Application.Abstractions.Messaging;
-using Application.Features.Users.Commands.CheckIn;
 using Domain.Repositories;
 using Domain.SeedWork;
 
