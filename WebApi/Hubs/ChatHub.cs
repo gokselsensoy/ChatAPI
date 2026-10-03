@@ -75,16 +75,8 @@ namespace WebApi.Hubs
                 var becameOffline = _presenceService.SetOffline(currentUser.Id);
                 if (becameOffline)
                 {
-                    var user = await _userRepository.GetByIdAsync(currentUser.Id, Context.ConnectionAborted);
-                    DateTime? lastSeen = DateTime.UtcNow;
-                    if (user != null)
-                    {
-                        user.TouchLastSeen();
-                        await _unitOfWork.SaveChangesAsync(Context.ConnectionAborted);
-                        lastSeen = user.LastSeenAt;
-                    }
-
-                    await NotifySharedPeersAsync(currentUser.Id, isOnline: false, lastSeenAt: lastSeen);
+                    var lastSeen = await _sender.Send(new GetLastSeenCommand { UserId = currentUser.Id }, Context.ConnectionAborted);
+                    await NotifySharedPeersAsync(currentUser.Id, isOnline: false, lastSeenAt: lastSeen ?? DateTime.UtcNow);
                 }
             }
 
@@ -132,8 +124,7 @@ namespace WebApi.Hubs
 
         public async Task JoinRoomGroup(string roomId)
         {
-            if (!Guid.TryParse(roomId, out var roomGuid))
-                throw new HubException("Geçersiz roomId.");
+            if (!Guid.TryParse(roomId, out var roomGuid)) throw new HubException("Geçersiz roomId.");
 
             var currentUser = await GetCurrentUserAsync();
             if (currentUser == null) throw new HubException("Kullanıcı doğrulanamadı.");
@@ -155,7 +146,7 @@ namespace WebApi.Hubs
         {
             if (!Guid.TryParse(messageId, out var messageGuid)) throw new HubException("Geçersiz mesaj formatı!");
 
-            if (string.IsNullOrWhiteSpace(emoji)) throw new HubException("EMoji boş olamaz.");
+            if (string.IsNullOrWhiteSpace(emoji)) throw new HubException("Eoji boş olamaz.");
 
             var currentUser = await GetCurrentUserAsync();
             if (currentUser == null) throw new HubException("Kullanıcı doğrulanamadı.");
