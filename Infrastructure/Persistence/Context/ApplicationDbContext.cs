@@ -82,6 +82,8 @@ namespace Infrastructure.Persistence.Context
 
         public DbSet<Brand> Brands { get; set; }
         public DbSet<Branch> Branches { get; set; }
+        public DbSet<BranchEvent> BranchEvents { get; set; }
+        public DbSet<BranchEventParticipant> BranchEventParticipants { get; set; }
         public DbSet<User> Users { get; set; }
         public DbSet<UserLocation> UserLocations { get; set; }
         public DbSet<CheckInHistory> CheckInHistories { get; set; }

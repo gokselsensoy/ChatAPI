@@ -45,6 +45,9 @@ namespace Infrastructure.DependencyInjection
             services.AddScoped<IBranchRepository, BranchRepository>();
             services.AddScoped<IBranchQueryRepository, BranchQueryRepository>();
 
+            services.AddScoped<IBranchEventQueryRepository, BranchEventQueryRepository>();
+            services.AddScoped<IBranchEventRepository, BranchEventRepository>();
+
             services.AddScoped<IUserRepository, UserRepository>();
             services.AddScoped<IUserQueryRepository, UserQueryRepository>();
 
