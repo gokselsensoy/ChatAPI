@@ -11,6 +11,9 @@ using Microsoft.AspNetCore.SignalR;
 using System.Security.Claims;
 using Application.Features.ChatRooms.Queries.CheckUserRoomAccess;
 using Application.Features.Users.Commands.UpdateUserLastSeen;
+using Domain.Exceptions;
+using Application.Features.ChatRooms.Commands.ToogleReaction;
+using Application.Features.Branches.Queries.CheckUserBranchAccess;
 
 namespace WebApi.Hubs
 {
@@ -101,7 +104,7 @@ namespace WebApi.Hubs
                 throw new HubException("Kullanıcı doğrulanamadı.");
 
             // Şube yetki kontrolünü MediatR'daki Query üzerinden arka planda yapıyoruz
-            var hasAccess = await _sender.Send(new Application.Features.Branches.Queries.CheckUserBranchAccess.CheckUserBranchAccessQuery
+            var hasAccess = await _sender.Send(new CheckUserBranchAccessQuery
             {
                 UserId = currentUser.Id,
                 BranchId = branchGuid

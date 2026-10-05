@@ -2,9 +2,6 @@ using Domain.Repositories;
 using Application.Abstractions.QueryRepositories;
 using Application.Exceptions; // Veya NotFoundException neredeyse
 using MediatR;
-using System.Linq;
-using System.Threading;
-using System.Threading.Tasks;
 
 namespace Application.Features.ChatRooms.Queries.CheckUserRoomAccess
 {

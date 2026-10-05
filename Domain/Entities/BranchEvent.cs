@@ -4,7 +4,7 @@ using System.Collections.Generic;
 
 namespace Domain.Entities
 {
-    public class BranchEvent : Entity
+    public class BranchEvent : Entity, IAggregateRoot
     {
         public Guid BranchId { get; private set; }
         public string Title { get; private set; }

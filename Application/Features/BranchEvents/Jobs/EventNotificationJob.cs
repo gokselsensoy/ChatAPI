@@ -26,37 +26,38 @@ namespace Application.Features.BranchEvents.Jobs
         // Hangfire tam saati geldiğinde bu metodu parametrelerle çağıracak
         public async Task SendReminderAsync(Guid userId, Guid eventId)
         {
-            // 1. Etkinlik bilgilerini getir (Sadece başlığı için çekiyoruz)
-            // CancellationToken.None veriyoruz çünkü bu işlem arka planda bağımsız çalışıyor
+            // 1. Etkinlik bilgilerini getir
             var branchEvent = await _eventRepository.GetByIdAsync(eventId, CancellationToken.None);
-
-            // Eğer şube sahibi etkinliği o arada tamamen silmişse işlemi sessizce bitir
             if (branchEvent == null) return;
 
-            // 2. Kullanıcının güncel cihaz tokenlarını getir
-            var deviceTokens = await _deviceTokenRepository.GetByUserIdAsync(userId, CancellationToken.None);
-
-            // Kullanıcı uygulamayı silmiş veya token'ı yoksa işlemi bitir
-            if (deviceTokens == null || !deviceTokens.Any()) return;
+            // 2. Kullanıcının cihaz token nesnesini getir
+            var userDevice = await _deviceTokenRepository.GetByIdAsync(userId, CancellationToken.None);
+            if (userDevice == null || string.IsNullOrEmpty(userDevice.Token)) return;
 
             // 3. Bildirim içeriğini hazırla
-            string title = "Etkinlik Başlamak Üzere! ⏰"; // Buradaki metinler değişebilir
+            string title = "Etkinlik Başlamak Üzere! ⏰";
             string body = $"'{branchEvent.Title}' etkinliği 1 saat sonra başlıyor. Yerin hazır mı?";
 
-            // (Opsiyonel) Mobilde bildirime tıklanınca doğrudan etkinliğin açılması için data
-            var dataPayload = new { EventId = branchEvent.Id, Route = "BranchEventsScreen" };
-
-            // 4. Kullanıcının tüm cihazlarına (Örn: Hem iPhone hem iPad kullanıyorsa) bildirimi at
-            foreach (var device in deviceTokens)
+            // 4. Eski dataPayload satırını tamamen sildik, sadece Dictionary olanı kullanıyoruz:
+            var dataPayload = new Dictionary<string, string>
             {
-                // Not: SendNotificationAsync metodunun tam parametre isimleri sendeki arayüze 
-                // (IPushNotificationService) göre ufak farklılıklar gösterebilir, orayı kendine göre ayarlarsın.
-                await _pushNotificationService.SendNotificationAsync(
-                    device.Token,
-                    title,
-                    body,
-                    dataPayload);
-            }
+                { "EventId", branchEvent.Id.ToString() },
+                { "Route", "BranchEventsScreen" }
+            };
+
+            // 5. Verileri PushMessage nesnesine dönüştür
+            var pushMessage = new PushMessage
+            {
+                Title = title,
+                Body = body,
+                Data = dataPayload // Sınıfınızda adı farklıysa (örn: CustomData) burayı güncelleyin
+            };
+
+            // 6. Token'ı bir listeye sararak metodu çağır
+            await _pushNotificationService.SendToTokensAsync(
+                new List<string> { userDevice.Token },
+                pushMessage
+            );
         }
     }
 }

@@ -44,7 +44,7 @@ namespace Domain.Entities
             if (Reactions.Any(r => r.UserId == userId && r.Emoji == emoji))
                 return;
 
-            Reactions.Add(MessageReaction.Create(Id, userId, emoji))
+            Reactions.Add(MessageReaction.Create(Id, userId, emoji));
         }
 
         public void RemoveReaction(Guid userId, string emoji)

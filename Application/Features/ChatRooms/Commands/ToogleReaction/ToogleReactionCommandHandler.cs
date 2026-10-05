@@ -1,4 +1,5 @@
 using Application.Abstractions.Services;
+using Application.Features.ChatRooms.Commands.ToogleReaction;
 using Domain.Exceptions;
 using Domain.Repositories;
 using Domain.SeedWork;
@@ -8,18 +9,18 @@ namespace Application.Features.ChatRooms.Commands.ToggleReaction
 {
     public class ToggleReactionCommandHandler : IRequestHandler<ToggleReactionCommand, bool>
     {
-        private readonly IChatRoomMessageRepository _chatRoomMessageRepository;
+        private readonly IChatRoomRepository _chatRoomRepository;
         private readonly IUnitOfWork _unitOfWork;
         private readonly INotificationService _notificationService; // SignalR
 
-        public ToogleReactionCommandHandler(IChatRoomMessageRepository chatRoomRepository, IUnitOfWork unitOfWork, INotificationService notificationService)
+        public ToggleReactionCommandHandler(IChatRoomRepository chatRoomRepository, IUnitOfWork unitOfWork, INotificationService notificationService)
         {
             _chatRoomRepository = chatRoomRepository;
             _unitOfWork = unitOfWork;
             _notificationService = notificationService;
         }
 
-        public async Task<bool> Handle(ToggleReactionCommandHandler request, CancellationToken cancellationToken)
+        public async Task<bool> Handle(ToggleReactionCommand request, CancellationToken cancellationToken)
         {
             // 1. Veritabanından (Repository aracaılığıyla) mesajı al
             var message = await _chatRoomRepository.GetMessageByIdAsync(request.MessageId, cancellationToken) ?? throw new ChatRoomDomainException("Mesaj bulunamadı.");

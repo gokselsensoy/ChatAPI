@@ -1,8 +1,10 @@
+using MediatR;
+
 namespace Application.Features.ChatRooms.Queries.CheckUserRoomAccess
 {
-    public class CheckUserRoomAccessQuery : IUserQueryRepository<bool>
+    public class CheckUserRoomAccessQuery : IRequest<bool>
     {
-        public GetBrandByOwnerUserIdQuery UserId { get; set; }
-        public GetBrandByOwnerUserIdQuery RoomId { get; set; }
+        public Guid UserId { get; set; }
+        public Guid RoomId { get; set; }
     }
 }

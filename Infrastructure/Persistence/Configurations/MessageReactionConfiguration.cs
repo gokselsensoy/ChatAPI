@@ -20,13 +20,13 @@ namespace Infrastructure.Persistence.Configurations
             // 1. İlişki: Mesaj - Reaksiyon (Mesaj silinirse, ona atılan reaksiyonlar silinsin)
             builder.HasOne(x => x.ChatRoomMessage)
                 .WithMany(x => x.Reactions)
-                .HasForeignkey(x => x.ChatRoomMessageId)
+                .HasForeignKey(x => x.ChatRoomMessageId)
                 .OnDelete(DeleteBehavior.Cascade);
 
             // 2. İlişki Kullanıcı - Reaksiyon (Kullanıcı silinsede attığı tepkiler kalsın)
             builder.HasOne(x => x.User)
                 .WithMany()
-                .HasForeignkey(x => x.UserId)
+                .HasForeignKey(x => x.UserId)
                 .OnDelete(DeleteBehavior.Restrict);
 
             // Çok Önemli Mirari Kural: Aynı mesaja, aynı kullanıcı, aynı emojiden sadece 1 tane atabilsin!
