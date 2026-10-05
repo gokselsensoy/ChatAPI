@@ -1,42 +1,47 @@
 using Domain.SeedWork;
+using System;
+using System.Collections.Generic;
 
 namespace Domain.Entities
 {
     public class BranchEvent : Entity
     {
         public Guid BranchId { get; private set; }
-        public string EventName { get; private set; }
-        public string EventType { get; private set; }
-        public string EventStatus { get; private set; } // "string" yerine daha uygun bir type düşünülebilir ('upcoming', 'live', 'ended')
-        public DateTimeOffset StartDate { get; private set; }
-        public DateTimeOffset EndDate { get; private set; }
+        public string Title { get; private set; }
+        public string Description { get; private set; }
+        public DateTime StartDate { get; private set; }
+        public DateTime EndDate { get; private set; }
+        public bool IsHighlighted { get; private set; }
+        public string? ImageUrl { get; private set; }
 
-        private BranchEvent() { }
+        // Navigations
+        public Branch? Branch { get; private set; }
+        public ICollection<BranchEventParticipant> Participants { get; private set; }
 
-        internal static BranchEvent Create(Guid branchId, string eventName, string eventType, string eventStatus, DateTimeOffset startDate, DateTimeOffset endDate)
+        private BranchEvent()
         {
-            // Burada geçmiş tarihli bir event oluşturulmasını engellenmeli. Ama onun için projeye TimeProvider enjekte edilmesi gerekiyor. Şimdilik bunu frontend'de engelleyeceğim.
-            if (false) throw new ArgumentException("Geçmiş Tarihli bir event oluşturulamaz.");
+            Participants = new List<BranchEventParticipant>();
+        }
+
+        // Factory Metot
+        public static BranchEvent Create(Guid branchId, string title, string description, DateTime startDate, DateTime endDate, bool isHighlighted = false, string? imageUrl = null)
+        {
+            if (startDate >= endDate)
+                throw new ArgumentException("Bitiş tarihi, başlangıç tarihinden önce veya aynı olamaz.");
 
             return new BranchEvent
             {
                 Id = Guid.NewGuid(),
                 BranchId = branchId,
-                EventName = eventName,
-                EventType = eventType,
-                EventStatus = eventStatus,
+                Title = title,
+                Description = description,
                 StartDate = startDate,
-                EndDate = endDate
+                EndDate = endDate,
+                IsHighlighted = isHighlighted,
+                ImageUrl = imageUrl,
+                CreatedDate = DateTime.UtcNow,
+                Participants = new List<BranchEventParticipant>()
             };
-        }
-
-        internal static BranchEvent Update(string eventName, string eventType, string eventStatus, DateTimeOffset startDate, DateTimeOffset endDate)
-        {
-            EventName = eventName;
-            EventType = eventType;
-            EventStatus = eventStatus;
-            StartDate = startDate;
-            EndDate = endDate;
         }
     }
 }
