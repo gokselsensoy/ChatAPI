@@ -240,6 +240,16 @@ namespace Infrastructure.Persistence.QueryRepositories
                 item.ReplyToIsMine = item.ReplyToSenderUserId.HasValue
                     && item.ReplyToSenderUserId.Value == currentUserId;
                 item.SenderRole = adminTagUserIds.Contains(item.SenderUserId) ? "Admin" : "Müşteri";
+
+                item.Reactions = item.RawReactions
+                    .GroupBy(r => r.Emoji)
+                    .Select(g => new MessageReactionDto
+                    {
+                        Emoji = g.Key,
+                        Count = g.Count(),
+                        HasReacted = g.Any(r => r.UserId == currentUserId)
+                    })
+                    .ToList();
             }
 
             return new PaginatedResponse<ChatRoomMessageDto>(items, count, pagination.PageNumber, pagination.PageSize);

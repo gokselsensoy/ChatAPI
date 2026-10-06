@@ -8,6 +8,8 @@ namespace Application.Mappings
     {
         public ChatRoomMessageProfile()
         {
+            CreateMap<MessageReaction, MessageReactionDto>();
+
             CreateMap<ChatRoomMessage, ChatRoomMessageDto>()
                 .ForMember(dest => dest.SenderUserName,
                            opt => opt.MapFrom(src => src.SenderUser.UserName))
@@ -27,7 +29,8 @@ namespace Application.Mappings
                            opt => opt.MapFrom(src => src.ReplyToMessage != null
                                ? src.ReplyToMessage.Message
                                : null))
-                .ForMember(dest => dest.ReplyToIsMine, opt => opt.Ignore());
+                .ForMember(dest => dest.ReplyToIsMine, opt => opt.Ignore())
+                .ForMember(dest => dest.RawReactions, opt => opt.MapFrom(src => src.Reactions));
         }
     }
 }

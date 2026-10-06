@@ -1,4 +1,6 @@
-﻿namespace Application.Features.ChatRooms.DTOs
+﻿using Domain.Entities;
+
+namespace Application.Features.ChatRooms.DTOs
 {
     public class ChatRoomMessageDto
     {
@@ -36,5 +38,12 @@
         /// replyToSenderUserId == kendi userId ile hesaplamalıdır.
         /// </summary>
         public bool ReplyToIsMine { get; set; }
+
+        // Veritabanından gelen saf reaksiyonları (Gruplanmamış halini) tutmak için
+        [System.Text.Json.Serialization.JsonIgnore] // API yanıtında gizlemek için
+        public ICollection<RawReactionDto> RawReactions { get; set; } = new List<RawReactionDto>();
+
+        // Mobil tarafa döneceğimiz, gruplanmış ve hesaplanmış asıl liste
+        public List<MessageReactionDto> Reactions { get; set; } = new List<MessageReactionDto>();
     }
 }
