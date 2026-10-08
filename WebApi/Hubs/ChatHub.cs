@@ -20,11 +20,6 @@ namespace WebApi.Hubs
     [Authorize]
     public class ChatHub : Hub
     {
-        private readonly IUserQueryRepository _userQueryRepository;
-        private readonly IUserRepository _userRepository;
-        private readonly IChatRoomRepository _chatRoomRepository;
-        private readonly IUserLocationQueryRepository _userLocationQueryRepository;
-        private readonly IBranchQueryRepository _branchQueryRepository;
         private readonly IPresenceService _presenceService;
         private readonly INotificationService _notificationService;
         private readonly IUnitOfWork _unitOfWork;
@@ -33,11 +28,13 @@ namespace WebApi.Hubs
         public ChatHub(
             IPresenceService presenceService,
             INotificationService notificationService,
-            IUnitOfWork unitOfWork)
+            IUnitOfWork unitOfWork,
+            ISender sender)
         {
             _presenceService = presenceService;
             _notificationService = notificationService;
             _unitOfWork = unitOfWork;
+            _sender = sender;
         }
 
         public override async Task OnConnectedAsync()
