@@ -23,7 +23,7 @@ namespace Application.Features.ChatRooms.Queries.CheckUserRoomAccess
 
         public async Task<bool> Handle(CheckUserRoomAccessQuery request, CancellationToken cancellationToken)
         {
-            var room = await _chatRoomRepository.GetByIdAsync(request.RoomId, cancellationToken);
+            var room = await _chatRoomRepository.GetByIdWithUsersAsync(request.RoomId, cancellationToken);
 
             if (room == null) throw new NotFoundException("Oda bulunamadı.");
 
