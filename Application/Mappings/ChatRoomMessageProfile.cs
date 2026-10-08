@@ -8,6 +8,8 @@ namespace Application.Mappings
     {
         public ChatRoomMessageProfile()
         {
+            CreateMap<MessageReaction, RawReactionDto>();
+
             CreateMap<MessageReaction, MessageReactionDto>();
 
             CreateMap<ChatRoomMessage, ChatRoomMessageDto>()
