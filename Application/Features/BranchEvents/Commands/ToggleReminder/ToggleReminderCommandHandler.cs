@@ -15,7 +15,7 @@ namespace Application.Features.BranchEvents.Commands.ToggleReminder
     {
         private readonly IBranchEventRepository _eventRepository;
         private readonly IUnitOfWork _unitOfWork;
-        private readonly IBackgroundJobClient _backgroundJobClient; // Hangfire servisi
+        private readonly IBackgroundJobClient _backgroundJobClient;
 
         public ToggleEventReminderCommandHandler(
             IBranchEventRepository eventRepository, 
@@ -34,19 +34,16 @@ namespace Application.Features.BranchEvents.Commands.ToggleReminder
 
             var participant = branchEvent.Participants.FirstOrDefault(p => p.UserId == request.UserId);
             
-            // Güvenlik Kuralı: Katılmadan hatırlatıcı kurulamaz.
             if (participant == null || !participant.IsAttending)
                 throw new Exception("Hatırlatıcı kurabilmek için önce etkinliğe katılmalısınız.");
 
-            // Geçmiş bir etkinlik için hatırlatıcı kurulamaz
             if (branchEvent.StartDate <= DateTime.UtcNow)
                 throw new Exception("Başlamış veya bitmiş bir etkinlik için hatırlatıcı kurulamaz.");
 
             if (!participant.IsReminderSet)
             {
-                var triggerTime = branchEvent.StartDate.AddHours(-1); // 1 saat önce
+                var triggerTime = branchEvent.StartDate.AddHours(-1);
 
-                // Eğer etkinliğe 1 saatten daha az bir süre kalmışsa, bildirimi 10 saniye sonra hemen gönder.(Buranın nasıl çalışacağından emin değilim eğer spam durumu olursa burayı düzelt.)
                 if (triggerTime <= DateTime.UtcNow)
                     triggerTime = DateTime.UtcNow.AddSeconds(10);
 
@@ -59,7 +56,6 @@ namespace Application.Features.BranchEvents.Commands.ToggleReminder
             }
             else
             {
-                // 2. DURUM: HATIRLATICIYI İPTAL ETME
                 if (!string.IsNullOrEmpty(participant.HangfireJobId))
                 {
                     _backgroundJobClient.Delete(participant.HangfireJobId);

@@ -10,18 +10,17 @@ namespace Application.Features.BranchEvents.Commands.CreateBranchEvent
 {
     public class CreateBranchEventCommandHandler : IRequestHandler<CreateBranchEventCommand, Guid>
     {
-        private readonly IBranchEventRepository _repository;
+        private readonly IBranchEventRepository _branchEventRepository;
         private readonly IUnitOfWork _unitOfWork;
 
         public CreateBranchEventCommandHandler(IBranchEventRepository repository, IUnitOfWork unitOfWork)
         {
-            _repository = repository;
+            _branchEventRepository = repository;
             _unitOfWork = unitOfWork;
         }
 
         public async Task<Guid> Handle(CreateBranchEventCommand request, CancellationToken cancellationToken)
         {
-            // Entity içerisindeki Factory metodu çağrılıyor. (Domain Event'i kendi içinde fırlatıyor)
             var branchEvent = BranchEvent.Create(
                 request.BranchId,
                 request.Title,
@@ -32,9 +31,8 @@ namespace Application.Features.BranchEvents.Commands.CreateBranchEvent
                 request.ImageUrl
             );
 
-            await _repository.AddAsync(branchEvent);
+            await _branchEventRepository.AddAsync(branchEvent);
             
-            // UnitOfWork save işleminde, Entity içinde biriken Domain Event'ler otomatik yakalanıp Publish edilecek
             await _unitOfWork.SaveChangesAsync(cancellationToken);
 
             return branchEvent.Id;
