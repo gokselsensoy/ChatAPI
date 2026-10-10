@@ -28,17 +28,26 @@ namespace WebApi.Controllers
         private async Task<Guid> GetCurrentUserIdAsync()
         {
             var identityIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? User.FindFirst("sub")?.Value;
-            
+
             if (string.IsNullOrWhiteSpace(identityIdClaim) || !Guid.TryParse(identityIdClaim, out var identityId))
                 throw new UnauthorizedAccessException("Geçersiz veya eksik Token.");
 
             // Önceden yazdığımız Query'yi kullanarak kullanıcıyı çekiyoruz (Repository kirliliği yok!)
             var user = await _sender.Send(new GetUserByIdentityIdQuery { IdentityId = identityId });
-            
-            if (user == null) 
+
+            if (user == null)
                 throw new UnauthorizedAccessException("Kullanıcı doğrulanamadı.");
-            
+
             return user.Id;
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> CreateEvent([FromBody] CreateBranchEventCommand command)
+        {
+            // Admin yetki kontrolü ileride buraya veya pipeline'a eklenebilir
+            var eventId = await _sender.Send(command);
+
+            return Ok(new { success = true, eventId });
         }
 
         [HttpGet("branch/{branchId}")]
@@ -69,7 +78,7 @@ namespace WebApi.Controllers
 
             // Dönen sonuç (true/false) mobildeki butonu güncellemek için kullanılacak
             var isAttending = await _sender.Send(command);
-            
+
             return Ok(new { success = true, isAttending });
         }
 
@@ -86,7 +95,7 @@ namespace WebApi.Controllers
 
             // Dönen sonuç mobildeki "Hatırlatıcı Kuruldu" ibaresini göstermek için kullanılacak
             var isReminderSet = await _sender.Send(command);
-            
+
             return Ok(new { success = true, isReminderSet });
         }
     }
