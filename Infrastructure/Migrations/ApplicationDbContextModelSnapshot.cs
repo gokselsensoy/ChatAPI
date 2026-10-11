@@ -184,6 +184,100 @@ namespace Infrastructure.Migrations
                     b.ToTable("BranchAdminMaps", (string)null);
                 });
 
+            modelBuilder.Entity("Domain.Entities.BranchEvent", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("BranchId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedDate")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
+                    b.Property<DateTime>("EndDate")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("ImageUrl")
+                        .HasColumnType("text");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("IsHighlighted")
+                        .HasColumnType("boolean");
+
+                    b.Property<DateTime>("StartDate")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<DateTime?>("UpdatedDate")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("BranchId");
+
+                    b.ToTable("BranchEvents", (string)null);
+                });
+
+            modelBuilder.Entity("Domain.Entities.BranchEventParticipant", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("BranchEventId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedDate")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("HangfireJobId")
+                        .HasMaxLength(150)
+                        .HasColumnType("character varying(150)");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("IsAttending")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("IsReminderSet")
+                        .HasColumnType("boolean");
+
+                    b.Property<DateTime?>("UpdatedDate")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId");
+
+                    b.HasIndex("BranchEventId", "UserId")
+                        .IsUnique();
+
+                    b.ToTable("BranchEventParticipants", (string)null);
+                });
+
             modelBuilder.Entity("Domain.Entities.Brand", b =>
                 {
                     b.Property<Guid>("Id")
@@ -516,6 +610,44 @@ namespace Infrastructure.Migrations
                     b.HasIndex("MenuId");
 
                     b.ToTable("MenuItems", (string)null);
+                });
+
+            modelBuilder.Entity("Domain.Entities.MessageReaction", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("ChatRoomMessageId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedDate")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Emoji")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("boolean");
+
+                    b.Property<DateTime?>("UpdatedDate")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId");
+
+                    b.HasIndex("ChatRoomMessageId", "UserId", "Emoji")
+                        .IsUnique();
+
+                    b.ToTable("MessageReactions", (string)null);
                 });
 
             modelBuilder.Entity("Domain.Entities.User", b =>
@@ -1175,6 +1307,36 @@ namespace Infrastructure.Migrations
                     b.Navigation("User");
                 });
 
+            modelBuilder.Entity("Domain.Entities.BranchEvent", b =>
+                {
+                    b.HasOne("Domain.Entities.Branch", "Branch")
+                        .WithMany()
+                        .HasForeignKey("BranchId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Branch");
+                });
+
+            modelBuilder.Entity("Domain.Entities.BranchEventParticipant", b =>
+                {
+                    b.HasOne("Domain.Entities.BranchEvent", "BranchEvent")
+                        .WithMany("Participants")
+                        .HasForeignKey("BranchEventId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Domain.Entities.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("BranchEvent");
+
+                    b.Navigation("User");
+                });
+
             modelBuilder.Entity("Domain.Entities.Brand", b =>
                 {
                     b.HasOne("Domain.Entities.User", "OwnerUser")
@@ -1289,6 +1451,25 @@ namespace Infrastructure.Migrations
                         .IsRequired();
 
                     b.Navigation("Menu");
+                });
+
+            modelBuilder.Entity("Domain.Entities.MessageReaction", b =>
+                {
+                    b.HasOne("Domain.Entities.ChatRoomMessage", "ChatRoomMessage")
+                        .WithMany("Reactions")
+                        .HasForeignKey("ChatRoomMessageId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Domain.Entities.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("ChatRoomMessage");
+
+                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("Domain.Entities.UserDeviceToken", b =>
@@ -1409,6 +1590,11 @@ namespace Infrastructure.Migrations
                     b.Navigation("Menus");
                 });
 
+            modelBuilder.Entity("Domain.Entities.BranchEvent", b =>
+                {
+                    b.Navigation("Participants");
+                });
+
             modelBuilder.Entity("Domain.Entities.Brand", b =>
                 {
                     b.Navigation("Branches");
@@ -1421,6 +1607,11 @@ namespace Infrastructure.Migrations
                     b.Navigation("ChatRoomUserMaps");
 
                     b.Navigation("Messages");
+                });
+
+            modelBuilder.Entity("Domain.Entities.ChatRoomMessage", b =>
+                {
+                    b.Navigation("Reactions");
                 });
 
             modelBuilder.Entity("Domain.Entities.Menu", b =>
