@@ -18,18 +18,12 @@ namespace Domain.Entities
         public Branch? Branch { get; private set; }
         public ICollection<BranchEventParticipant> Participants { get; private set; }
 
-        private BranchEvent()
-        {
-            Participants = new List<BranchEventParticipant>();
-        }
-
-        // Factory Metot
         public static BranchEvent Create(Guid branchId, string title, string description, DateTime startDate, DateTime endDate, bool isHighlighted = false, string? imageUrl = null)
         {
             if (startDate >= endDate)
                 throw new ArgumentException("Bitiş tarihi, başlangıç tarihinden önce veya aynı olamaz.");
 
-            return new BranchEvent
+            var branchEvent = new BranchEvent
             {
                 Id = Guid.NewGuid(),
                 BranchId = branchId,
@@ -42,6 +36,34 @@ namespace Domain.Entities
                 CreatedDate = DateTime.UtcNow,
                 Participants = new List<BranchEventParticipant>()
             };
+
+            branchEvent.AddDomainEvent(new BranchEventCreatedDomainEvent(branchEvent.Id, branchEvent.BranchId, branchEvent.Title));
+
+            return branchEvent;
+        }
+
+        public void UpdateDetails(string title, string description, DateTime startDate, DateTime endDate, bool isHighlighted = false, string? imageUrl = null)
+        {
+            if (startDate >= endDate)
+                throw new ArgumentException("Bitiş tarihi, başlangıç tarihinden önce veya aynı olamaz.");
+
+            Title = title;
+            Description = description;
+            StartDate = startDate;
+            EndDate = endDate;
+            IsHighlighted = isHighlighted;
+            ImageUrl = imageUrl;
+            UpdatedDate = DateTime.UtcNow;
+
+            AddDomainEvent(new BranchEventUpdatedDomainEvent(Id, BranchId));
+        }
+
+        public void MarkAsDeleted()
+        {
+            IsDeleted = true;
+            UpdatedDate = DateTime.UtcNow;
+
+            AddDomainEvent(new BranchEventDeletedDomainEvent(Id, BranchId));
         }
     }
 }

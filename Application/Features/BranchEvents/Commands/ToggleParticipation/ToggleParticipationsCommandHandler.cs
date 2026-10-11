@@ -5,7 +5,7 @@ using MediatR;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using Application.Exceptions; // NotFoundException'ın bulunduğu namespace
+using Application.Exceptions;
 
 namespace Application.Features.BranchEvents.Commands.ToggleParticipation
 {
@@ -29,13 +29,11 @@ namespace Application.Features.BranchEvents.Commands.ToggleParticipation
 
             if (participant == null)
             {
-                // İlk kez basıyorsa kaydı oluştur ve ekle (Varsayılan olarak IsAttending = true gelir)
                 participant = BranchEventParticipant.Create(branchEvent.Id, request.UserId);
                 branchEvent.Participants.Add(participant);
             }
             else
             {
-                // Daha önce tıklamışsa durumu tersine çevir (Katılımı iptal et veya tekrar katıl)
                 participant.ToggleParticipation();
             }
 
