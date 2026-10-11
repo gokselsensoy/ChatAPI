@@ -1,19 +1,18 @@
 ﻿using MediatR;
-using System;
 
 namespace Domain.Events.BranchEvents
 {
-    public class BranchEventCreatedDomainEvent : INotification
+    public class BranchCreatedDomainEvent : INotification
     {
-        public Guid EventId { get; }
         public Guid BranchId { get; }
-        public string Title { get; }
+        public Guid BrandId { get; }
+        public string BranchName { get; }
 
-        public BranchEventCreatedDomainEvent(Guid eventId, Guid branchId, string title)
+        public BranchCreatedDomainEvent(Guid branchId, Guid brandId, string branchName)
         {
-            EventId = eventId;
             BranchId = branchId;
-            Title = title;
+            BrandId = brandId;
+            BranchName = branchName;
         }
     }
 }

@@ -25,7 +25,7 @@ namespace Application.Features.BranchEvents.Commands.UpdateBranchEvent
             if (branchEvent == null) 
                 throw new NotFoundException("Etkinlik bulunamadı."); // Projede tanımlı özel bir exception varsa onu kullanabilirsin (Örn: NotFoundException)
 
-            branchEvent.Update(
+            branchEvent.UpdateDetails(
                 request.Title,
                 request.Description,
                 request.StartDate,

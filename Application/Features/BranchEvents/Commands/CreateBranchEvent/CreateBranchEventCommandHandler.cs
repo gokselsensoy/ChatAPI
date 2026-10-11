@@ -31,8 +31,8 @@ namespace Application.Features.BranchEvents.Commands.CreateBranchEvent
                 request.ImageUrl
             );
 
-            await _branchEventRepository.AddAsync(branchEvent);
-            
+            _branchEventRepository.Add(branchEvent);
+
             await _unitOfWork.SaveChangesAsync(cancellationToken);
 
             return branchEvent.Id;

@@ -117,7 +117,7 @@ namespace Domain.Entities
 
             Address = newAddress;
 
-            AddDomainEvent(new BranchAddressUpdatedDomainEvent(Id));
+            AddDomainEvent(new BranchUpdatedDomainEvent(Id, BrandId, Name));
         }
 
         public void UpdateDetails(string newName, BranchType newType, string? newFileId)
@@ -130,7 +130,7 @@ namespace Domain.Entities
             FileId = newFileId;
 
             // Detaylar değiştiğinde de event fırlatılabilir
-            AddDomainEvent(new BranchAddressUpdatedDomainEvent(Id));
+            AddDomainEvent(new BranchUpdatedDomainEvent(Id, BrandId, Name));
         }
 
         /// <summary>

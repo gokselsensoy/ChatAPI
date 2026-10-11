@@ -1,9 +1,10 @@
+using Application.Exceptions;
+using Domain.Entities;
 using Domain.Repositories;
 using Domain.SeedWork;
 using MediatR;
 using System.Threading;
 using System.Threading.Tasks;
-using System;
 
 namespace Application.Features.BranchEvents.Commands.DeleteBranchEvent
 {
@@ -21,8 +22,8 @@ namespace Application.Features.BranchEvents.Commands.DeleteBranchEvent
         public async Task<bool> Handle(DeleteBranchEventCommand request, CancellationToken cancellationToken)
         {
             var branchEvent = await _branchEventRepository.GetByIdAsync(request.EventId, cancellationToken);
-            if (branchEvent == null) 
-                throw new Exception("Etkinlik bulunamadı.");
+            if (branchEvent == null || branchEvent.IsDeleted)
+                throw new NotFoundException(nameof(BranchEvent), request.EventId);
 
             branchEvent.MarkAsDeleted();
 

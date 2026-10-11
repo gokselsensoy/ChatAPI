@@ -1,3 +1,4 @@
+using Domain.Events.BranchEvents;
 using Domain.SeedWork;
 using System;
 using System.Collections.Generic;
@@ -17,6 +18,11 @@ namespace Domain.Entities
         // Navigations
         public Branch? Branch { get; private set; }
         public ICollection<BranchEventParticipant> Participants { get; private set; }
+
+        private BranchEvent()
+        {
+            Participants = new List<BranchEventParticipant>();
+        }
 
         public static BranchEvent Create(Guid branchId, string title, string description, DateTime startDate, DateTime endDate, bool isHighlighted = false, string? imageUrl = null)
         {
