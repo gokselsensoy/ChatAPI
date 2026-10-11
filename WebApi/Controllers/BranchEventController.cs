@@ -13,7 +13,7 @@ namespace WebApi.Controllers
 {
     [Authorize]
     [ApiController]
-    [Route("api/[controller]")]
+    [Route("api/branchevents")]
     public class BranchEventController : ControllerBase
     {
         private readonly ISender _sender;
@@ -56,7 +56,7 @@ namespace WebApi.Controllers
             return Ok(result);
         }
 
-        [HttpPost("{id}/participate")]
+        [HttpPost("participate/{id}")]
         public async Task<IActionResult> ToggleParticipation(Guid id)
         {
             var userId = await GetCurrentUserIdAsync();
@@ -73,7 +73,7 @@ namespace WebApi.Controllers
             return Ok(new { success = true, isAttending });
         }
 
-        [HttpPost("{id}/reminder")]
+        [HttpPost("reminder/{id}")]
         public async Task<IActionResult> ToggleReminder(Guid id)
         {
             var userId = await GetCurrentUserIdAsync();
