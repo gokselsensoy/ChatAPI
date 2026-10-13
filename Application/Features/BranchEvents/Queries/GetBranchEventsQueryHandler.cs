@@ -36,6 +36,8 @@ namespace Application.Features.BranchEvents.Queries.GetBranchEvents
                     Description = evt.Description,
                     IsHighlighted = evt.IsHighlighted,
                     ImageUrl = evt.ImageUrl,
+                    StartDate = evt.StartDate,
+                    EndDate = evt.EndDate,
                     // Sadece fiilen katılanları say
                     Participants = evt.Participants.Count(p => p.IsAttending)
                 };

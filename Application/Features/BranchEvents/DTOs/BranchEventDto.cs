@@ -10,6 +10,8 @@ namespace Application.Features.BranchEvents.DTOs
 
         // Dinamik hesaplanacak alanlar
         public string Status { get; set; } // 'live', 'upcoming', 'ended'
+        public DateTime StartDate { get; set; }
+        public DateTime EndDate { get; set; }
         public string TimeLabel { get; set; }
         public int Participants { get; set; }
 
