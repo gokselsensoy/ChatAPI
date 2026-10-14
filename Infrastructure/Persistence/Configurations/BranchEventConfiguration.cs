@@ -9,6 +9,7 @@ namespace Infrastructure.Persistence.Configurations
         public void Configure(EntityTypeBuilder<BranchEvent> builder)
         {
             builder.ToTable("BranchEvents");
+            builder.Property(e => e.Id).ValueGeneratedNever();
             builder.HasKey(e => e.Id);
 
             builder.Property(e => e.Title).IsRequired().HasMaxLength(200);
@@ -19,7 +20,7 @@ namespace Infrastructure.Persistence.Configurations
             builder.HasOne(e => e.Branch)
                    .WithMany()
                    .HasForeignKey(e => e.BranchId)
-                   .OnDelete(DeleteBehavior.Cascade); // Şube silinirse etkinlik de silinir
+                   .OnDelete(DeleteBehavior.Cascade);
         }
     }
 }

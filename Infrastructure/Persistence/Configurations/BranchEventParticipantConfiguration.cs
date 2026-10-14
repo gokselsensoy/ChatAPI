@@ -9,6 +9,7 @@ namespace Infrastructure.Persistence.Configurations
         public void Configure(EntityTypeBuilder<BranchEventParticipant> builder)
         {
             builder.ToTable("BranchEventParticipants");
+            builder.Property(e => e.Id).ValueGeneratedNever();
             builder.HasKey(e => e.Id);
 
             builder.Property(e => e.HangfireJobId).HasMaxLength(150);
