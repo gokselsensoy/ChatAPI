@@ -64,7 +64,7 @@ namespace Infrastructure.Persistence.QueryRepositories
             return new PaginatedResponse<BranchDto>(items, count, pagination.PageNumber, pagination.PageSize);
         }
 
-        public async Task<PaginatedResponse<NearbyBranchDto>> GetNearbyBranchesAsync(
+        public async Task<NearbyBranchesResponse> GetNearbyBranchesAsync(
     decimal latitude,
     decimal longitude,
     int distanceInMeters,
@@ -102,8 +102,15 @@ namespace Infrastructure.Persistence.QueryRepositories
             // 3. Mesafeye göre sırala
             query = query.OrderBy(b => b.Address.Location.Distance(userLocation));
 
-            // 4. Toplam Kayıt Sayısı
+            // 4. Toplam Kayıt Sayısı ve Check-In Yapılabilir Şube Sayısı
             var totalCount = await query.CountAsync(cancellationToken);
+
+            var checkInRadiusInDegrees = GeoConstants.CheckInRadiusInMeters / GeoConstants.DegreesToMetersFactor;
+            var checkInAvailableCount = await _context.Branches
+                .AsNoTracking()
+                .CountAsync(
+                    b => b.Address.Location.Distance(userLocation) <= checkInRadiusInDegrees,
+                    cancellationToken);
 
             // 5. Veriyi Entity Olarak Çek (Çeviri Hatasını Önlemek İçin)
             var branches = await query
@@ -133,7 +140,13 @@ namespace Infrastructure.Persistence.QueryRepositories
                 else item.FullnessLabel = "Çok Yoğun";
             }
 
-            return new PaginatedResponse<NearbyBranchDto>(items, totalCount, pagination.PageNumber, pagination.PageSize);
+            return new NearbyBranchesResponse(
+                items,
+                totalCount,
+                pagination.PageNumber,
+                pagination.PageSize,
+                checkInAvailableCount,
+                GeoConstants.CheckInRadiusInMeters);
         }
 
 

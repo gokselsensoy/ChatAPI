@@ -128,7 +128,7 @@ namespace WebApi.Controllers
         /// Rota: GET /api/branches/nearby?Latitude=40.71&amp;Longitude=-74.00&amp;Tags=Kahve&amp;Tags=CanliMuzik
         /// </remarks>
         [HttpGet("nearby")]
-        [ProducesResponseType(typeof(List<NearbyBranchDto>), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(NearbyBranchesResponse), StatusCodes.Status200OK)]
         public async Task<IActionResult> GetNearby([FromQuery] GetNearbyBranchesQuery query, CancellationToken cancellationToken)
         {
             query.CurrentUserId = await GetActingDomainUserIdAsync(cancellationToken);

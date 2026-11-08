@@ -6,7 +6,7 @@ using MediatR;
 
 namespace Application.Features.Branchs.Queries.GetNearbyBranches
 {
-    public class GetNearbyBranchesQuery : PaginatedRequest, IRequest<PaginatedResponse<NearbyBranchDto>>
+    public class GetNearbyBranchesQuery : PaginatedRequest, IRequest<NearbyBranchesResponse>
     {
         public decimal Latitude { get; set; }
         public decimal Longitude { get; set; }
