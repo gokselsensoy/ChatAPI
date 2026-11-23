@@ -9,5 +9,7 @@ namespace Application.Features.ChatRooms.DTOs
         public DateTime? LastSeenAt { get; set; }
         public DateTime JoinedAt { get; set; }
         public bool IsMe { get; set; }
+        public bool IsMuted { get; set; }
+        public string? BranchName { get; set; }
     }
 }

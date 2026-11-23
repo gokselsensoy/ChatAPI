@@ -55,6 +55,12 @@ namespace Infrastructure.Persistence.Repositories
             map.MarkAsRead();
         }
 
+        public async Task<ChatRoomUserMap?> GetUserMapAsync(Guid roomId, Guid userId, CancellationToken cancellationToken = default)
+        {
+            return await _context.Set<ChatRoomUserMap>()
+                .FirstOrDefaultAsync(m => m.ChatRoomId == roomId && m.UserId == userId, cancellationToken);
+        }
+
         public async Task<ChatRoom?> FindDirectRoomBetweenUsersAsync(
             Guid userId1,
             Guid userId2,

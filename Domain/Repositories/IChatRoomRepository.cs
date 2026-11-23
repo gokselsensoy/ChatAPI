@@ -11,6 +11,7 @@ namespace Domain.Repositories
         Task<ChatRoomMessage?> GetMessageByIdAsync(Guid messageId, CancellationToken cancellationToken = default);
         Task<List<ChatRoom>> GetRoomsByUserAndBranchAsync(Guid userId, Guid branchId, CancellationToken cancellationToken = default);
         Task MarkAsReadAsync(Guid roomId, Guid userId, CancellationToken cancellationToken = default);
+        Task<ChatRoomUserMap?> GetUserMapAsync(Guid roomId, Guid userId, CancellationToken cancellationToken = default);
 
         Task<ChatRoom?> FindDirectRoomBetweenUsersAsync(
             Guid userId1,

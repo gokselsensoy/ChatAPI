@@ -71,6 +71,8 @@ namespace Infrastructure.Persistence.QueryRepositories
     Guid? currentUserId,
     IReadOnlyList<BranchTag>? tags,
     PaginatedRequest pagination,
+    BranchType? branchType = null,
+    bool onlyCheckInAvailable = false,
     CancellationToken cancellationToken = default)
         {
             // 1. Konum nesnesini oluştur
@@ -78,7 +80,7 @@ namespace Infrastructure.Persistence.QueryRepositories
             var random = new Random();
 
             var skipGeoFilter = false;
-            if (currentUserId.HasValue)
+            if (currentUserId.HasValue && !onlyCheckInAvailable)
             {
                 var userId = currentUserId.Value;
                 // Brand owner veya herhangi bir şubede atanmış admin ise mesafe filtresi bypass edilir.
@@ -88,13 +90,24 @@ namespace Infrastructure.Persistence.QueryRepositories
 
             // 2. Temel Sorgu (Veritabanında filtreleme)
             var query = _context.Branches.AsNoTracking().AsQueryable();
-            if (!skipGeoFilter)
+            var checkInRadiusInDegrees = GeoConstants.CheckInRadiusInMeters / GeoConstants.DegreesToMetersFactor;
+
+            if (onlyCheckInAvailable)
+            {
+                query = query.Where(b => b.Address.Location.Distance(userLocation) <= checkInRadiusInDegrees);
+            }
+            else if (!skipGeoFilter)
             {
                 query = query.Where(b => EF.Functions.IsWithinDistance(
                                     b.Address.Location,
                                     userLocation,
                                     distanceInMeters,
                                     true));
+            }
+
+            if (branchType.HasValue)
+            {
+                query = query.Where(b => b.BranchType == branchType.Value);
             }
 
             query = ApplyTagFilter(query, tags);
@@ -105,8 +118,11 @@ namespace Infrastructure.Persistence.QueryRepositories
             // 4. Toplam Kayıt Sayısı ve Check-In Yapılabilir Şube Sayısı
             var totalCount = await query.CountAsync(cancellationToken);
 
-            var checkInRadiusInDegrees = GeoConstants.CheckInRadiusInMeters / GeoConstants.DegreesToMetersFactor;
             var checkInQuery = ApplyTagFilter(_context.Branches.AsNoTracking(), tags);
+            if (branchType.HasValue)
+            {
+                checkInQuery = checkInQuery.Where(b => b.BranchType == branchType.Value);
+            }
             var checkInAvailableCount = await checkInQuery
                 .CountAsync(
                     b => b.Address.Location.Distance(userLocation) <= checkInRadiusInDegrees,

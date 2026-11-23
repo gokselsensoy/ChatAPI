@@ -21,6 +21,8 @@ namespace Application.Abstractions.QueryRepositories
             Guid? currentUserId,
             IReadOnlyList<BranchTag>? tags,
             PaginatedRequest pagination,
+            BranchType? branchType = null,
+            bool onlyCheckInAvailable = false,
             CancellationToken cancellationToken = default);
 
 

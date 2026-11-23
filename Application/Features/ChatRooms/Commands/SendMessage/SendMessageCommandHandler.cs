@@ -20,6 +20,7 @@ namespace Application.Features.ChatRooms.Commands.SendMessage
         private readonly IBlacklistQueryRepository _blacklistQueryRepository;
         private readonly IBranchQueryRepository _branchQueryRepository;
         private readonly IUserDeviceTokenRepository _deviceTokenRepository;
+        private readonly IUserBlockRepository _userBlockRepository;
         private readonly IPresenceService _presenceService;
 
         public SendMessageCommandHandler(
@@ -31,6 +32,7 @@ namespace Application.Features.ChatRooms.Commands.SendMessage
             IBlacklistQueryRepository blacklistQueryRepository,
             IBranchQueryRepository branchQueryRepository,
             IUserDeviceTokenRepository deviceTokenRepository,
+            IUserBlockRepository userBlockRepository,
             IPresenceService presenceService)
         {
             _unitOfWork = unitOfWork;
@@ -41,13 +43,14 @@ namespace Application.Features.ChatRooms.Commands.SendMessage
             _blacklistQueryRepository = blacklistQueryRepository;
             _branchQueryRepository = branchQueryRepository;
             _deviceTokenRepository = deviceTokenRepository;
+            _userBlockRepository = userBlockRepository;
             _presenceService = presenceService;
         }
 
         public async Task<ChatRoomMessageDto> Handle(SendMessageCommand request, CancellationToken cancellationToken)
         {
             var room = await _chatRoomRepository.GetByIdWithUsersAsync(request.RoomId, cancellationToken);
-            if (room == null)
+            if (room == null || room.IsDeleted)
                 throw new NotFoundException(nameof(ChatRoom), request.RoomId);
 
             bool isBanned = await _blacklistQueryRepository.IsUserBannedAsync(request.SenderUserId, room.BranchId, cancellationToken);
@@ -56,6 +59,19 @@ namespace Application.Features.ChatRooms.Commands.SendMessage
 
             if (room.IsMemberOnlyRoom && !room.ChatRoomUserMaps.Any(m => m.UserId == request.SenderUserId))
                 throw new UnauthorizedAccessException("Bu odaya mesaj gönderme yetkiniz yok.");
+
+            if (room.RoomType == RoomType.Private)
+            {
+                var peerUserId = room.ChatRoomUserMaps
+                    .Where(m => m.UserId != request.SenderUserId)
+                    .Select(m => m.UserId)
+                    .FirstOrDefault();
+
+                if (peerUserId != Guid.Empty && await _userBlockRepository.IsBlockedEitherWayAsync(request.SenderUserId, peerUserId, cancellationToken))
+                {
+                    throw new UnauthorizedAccessException("Bu kullanıcıya mesaj gönderemezsiniz.");
+                }
+            }
 
             if (room.RequiresCheckInForMessaging)
                 await EnsureUserAtBranchOrAdminAsync(request.SenderUserId, room.BranchId, cancellationToken);
@@ -138,8 +154,11 @@ namespace Application.Features.ChatRooms.Commands.SendMessage
                     "PrivateInboxUpdated",
                     preview);
 
-                // OS push: Private + Group — gönderen hariç
-                var recipientUserIds = memberUserIds.Where(id => id != request.SenderUserId).ToList();
+                // OS push: Private + Group — gönderen ve sohbeti sessize alanlar (IsMuted) hariç
+                var recipientUserIds = room.ChatRoomUserMaps
+                    .Where(m => m.UserId != request.SenderUserId && !m.IsMuted)
+                    .Select(m => m.UserId)
+                    .ToList();
                 var tokens = await _deviceTokenRepository.GetActiveTokensByUserIdsAsync(recipientUserIds, cancellationToken);
                 if (tokens.Count > 0)
                 {

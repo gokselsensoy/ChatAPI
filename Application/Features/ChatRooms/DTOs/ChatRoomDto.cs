@@ -6,7 +6,9 @@
         public string Name { get; set; } = string.Empty;
         public string RoomType { get; set; } = string.Empty;
         public Guid BranchId { get; set; }
+        public string? BranchName { get; set; }
         public int MemberCount { get; set; }
+        public bool IsMuted { get; set; }
 
         public string? LastMessagePreview { get; set; }
         public DateTime? LastMessageAt { get; set; }

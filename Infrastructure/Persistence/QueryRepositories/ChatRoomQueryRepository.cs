@@ -130,7 +130,11 @@ namespace Infrastructure.Persistence.QueryRepositories
                     UserName = m.User!.UserName,
                     FileId = m.User.FileId,
                     LastSeenAt = m.User.LastSeenAt,
-                    JoinedAt = m.JoinedAt
+                    JoinedAt = m.JoinedAt,
+                    IsMuted = m.IsMuted,
+                    BranchName = m.ChatRoom != null && m.ChatRoom.Branch != null
+                        ? m.ChatRoom.Branch.Name
+                        : null
                 })
                 .ToListAsync(cancellationToken);
         }
@@ -150,8 +154,21 @@ namespace Infrastructure.Persistence.QueryRepositories
                 .Select(cr => new
                 {
                     Room = cr,
+                    BranchName = cr.Branch != null ? cr.Branch.Name : null,
                     MemberCount = cr.ChatRoomUserMaps.Count,
+                    IsMuted = cr.ChatRoomUserMaps
+                        .Where(m => m.UserId == userId)
+                        .Select(m => m.IsMuted)
+                        .FirstOrDefault(),
+                    ClearedAt = cr.ChatRoomUserMaps
+                        .Where(m => m.UserId == userId)
+                        .Select(m => m.ClearedAt)
+                        .FirstOrDefault(),
                     LastMessage = cr.Messages
+                        .Where(m => m.CreatedDate > (cr.ChatRoomUserMaps
+                            .Where(map => map.UserId == userId)
+                            .Select(map => map.ClearedAt)
+                            .FirstOrDefault() ?? DateTime.MinValue))
                         .OrderByDescending(m => m.CreatedDate)
                         .Select(m => new { m.Message, m.CreatedDate, m.SenderUserId })
                         .FirstOrDefault(),
@@ -161,6 +178,10 @@ namespace Infrastructure.Persistence.QueryRepositories
                         .FirstOrDefault(),
                     UnreadCount = cr.Messages.Count(msg =>
                         msg.SenderUserId != userId
+                        && msg.CreatedDate > (cr.ChatRoomUserMaps
+                            .Where(m => m.UserId == userId)
+                            .Select(m => m.ClearedAt)
+                            .FirstOrDefault() ?? DateTime.MinValue)
                         && msg.CreatedDate > (cr.ChatRoomUserMaps
                             .Where(m => m.UserId == userId)
                             .Select(m => m.LastReadAt)
@@ -193,7 +214,9 @@ namespace Infrastructure.Persistence.QueryRepositories
                         Name = x.Room.Name,
                         RoomType = x.Room.RoomType.ToString(),
                         BranchId = x.Room.BranchId,
+                        BranchName = x.BranchName,
                         MemberCount = x.MemberCount,
+                        IsMuted = x.IsMuted,
                         LastMessagePreview = TruncatePreview(x.LastMessage?.Message),
                         LastMessageAt = lastAt,
                         LastMessageSenderUserId = x.LastMessage?.SenderUserId,
@@ -222,7 +245,22 @@ namespace Infrastructure.Persistence.QueryRepositories
                             .Where(m => m.ChatRoomId == roomId);
 
             if (roomType == RoomType.Public)
+            {
                 query = query.Where(m => m.CreatedDate >= DateTime.UtcNow.AddHours(-2));
+            }
+            else
+            {
+                var clearedAt = await _context.Set<Domain.Entities.ChatRoomUserMap>()
+                    .AsNoTracking()
+                    .Where(m => m.ChatRoomId == roomId && m.UserId == currentUserId)
+                    .Select(m => m.ClearedAt)
+                    .FirstOrDefaultAsync(cancellationToken);
+
+                if (clearedAt.HasValue)
+                {
+                    query = query.Where(m => m.CreatedDate > clearedAt.Value);
+                }
+            }
 
             var count = await query.CountAsync(cancellationToken);
             var items = await query

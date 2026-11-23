@@ -46,5 +46,19 @@ namespace Infrastructure.Persistence.Repositories
                 .OrderByDescending(i => i.CreatedDate)
                 .ToListAsync(cancellationToken);
         }
+
+        public async Task<List<ChatRoomInvite>> GetPendingInvitesBetweenUsersAsync(
+            Guid userId1,
+            Guid userId2,
+            CancellationToken cancellationToken = default)
+        {
+            return await _context.ChatRoomInvites
+                .Where(inv =>
+                    !inv.IsDeleted
+                    && inv.Status == InviteStatus.Pending
+                    && ((inv.InviterUserId == userId1 && inv.InviteeUserId == userId2)
+                        || (inv.InviterUserId == userId2 && inv.InviteeUserId == userId1)))
+                .ToListAsync(cancellationToken);
+        }
     }
 }

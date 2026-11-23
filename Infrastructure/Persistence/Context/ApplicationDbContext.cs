@@ -97,6 +97,8 @@ namespace Infrastructure.Persistence.Context
         public DbSet<Menu> Menus { get; set; }
         public DbSet<MenuItem> MenuItems { get; set; }
         public DbSet<Announcement> Announcements { get; set; }
+        public DbSet<UserBlock> UserBlocks { get; set; }
+        public DbSet<UserReport> UserReports { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
