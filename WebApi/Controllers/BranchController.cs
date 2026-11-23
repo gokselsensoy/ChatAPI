@@ -9,6 +9,7 @@ using Application.Features.Branchs.Queries.GetBranchById;
 using Application.Features.Branchs.Queries.GetBranchesByBrandId;
 using Application.Features.Branchs.Queries.GetNearbyBranches;
 using Application.Shared.Pagination;
+using Domain.Enums;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -121,7 +122,71 @@ namespace WebApi.Controllers
         }
 
         /// <summary>
+        /// Şube etiketlerini (BranchTag) sıra, çeviri anahtarı, ikon ve varsayılan dil etiketleriyle birlikte istemciye döner.
+        /// </summary>
+        /// <remarks>
+        /// Rota: GET /api/branches/tags
+        /// </remarks>
+        [HttpGet("tags")]
+        [ProducesResponseType(typeof(List<BranchTagMetadataDto>), StatusCodes.Status200OK)]
+        public IActionResult GetBranchTags()
+        {
+            var items = new List<BranchTagMetadataDto>
+            {
+                new((int)BranchTag.Kahve, nameof(BranchTag.Kahve), "tags.coffee", "cafe", 1,
+                    new Dictionary<string, string> { ["tr"] = "Kahve", ["en"] = "Coffee" }),
+                new((int)BranchTag.CanliMuzik, nameof(BranchTag.CanliMuzik), "tags.liveMusic", "musical-notes", 2,
+                    new Dictionary<string, string> { ["tr"] = "Canlı Müzik", ["en"] = "Live Music" }),
+                new((int)BranchTag.AcikAlan, nameof(BranchTag.AcikAlan), "tags.openArea", "partly-sunny", 3,
+                    new Dictionary<string, string> { ["tr"] = "Açık Alan", ["en"] = "Open Area" }),
+                new((int)BranchTag.Alkol, nameof(BranchTag.Alkol), "tags.alcohol", "wine", 4,
+                    new Dictionary<string, string> { ["tr"] = "Alkol", ["en"] = "Alcohol" }),
+                new((int)BranchTag.Otopark, nameof(BranchTag.Otopark), "tags.parking", "car", 5,
+                    new Dictionary<string, string> { ["tr"] = "Otopark", ["en"] = "Parking" }),
+                new((int)BranchTag.CalismaAlani, nameof(BranchTag.CalismaAlani), "tags.workspace", "laptop", 6,
+                    new Dictionary<string, string> { ["tr"] = "Çalışma Alanı", ["en"] = "Workspace" }),
+                new((int)BranchTag.PetFriendly, nameof(BranchTag.PetFriendly), "tags.petFriendly", "paw", 7,
+                    new Dictionary<string, string> { ["tr"] = "Evcil Hayvan Dostu", ["en"] = "Pet Friendly" }),
+                new((int)BranchTag.VeganSecenekler, nameof(BranchTag.VeganSecenekler), "tags.veganOptions", "leaf", 8,
+                    new Dictionary<string, string> { ["tr"] = "Vegan Seçenekler", ["en"] = "Vegan Options" }),
+                new((int)BranchTag.Nargile, nameof(BranchTag.Nargile), "tags.hookah", "cloud", 9,
+                    new Dictionary<string, string> { ["tr"] = "Nargile", ["en"] = "Hookah" }),
+                new((int)BranchTag.DenizKenari, nameof(BranchTag.DenizKenari), "tags.seaside", "water", 10,
+                    new Dictionary<string, string> { ["tr"] = "Deniz Kenarı", ["en"] = "Seaside" }),
+                new((int)BranchTag.CanliSporYayini, nameof(BranchTag.CanliSporYayini), "tags.liveSports", "football", 11,
+                    new Dictionary<string, string> { ["tr"] = "Canlı Spor Yayını", ["en"] = "Live Sports" }),
+                new((int)BranchTag.OyunAlani, nameof(BranchTag.OyunAlani), "tags.gameArea", "game-controller", 12,
+                    new Dictionary<string, string> { ["tr"] = "Oyun Alanı", ["en"] = "Game Area" }),
+                new((int)BranchTag.SigaraIcebilirAlan, nameof(BranchTag.SigaraIcebilirAlan), "tags.smokingArea", "flame", 13,
+                    new Dictionary<string, string> { ["tr"] = "Sigara İçilebilir Alan", ["en"] = "Smoking Area" }),
+            };
+
+            // Enum'a yeni bir değer eklenip yukarıdaki listeye eklenmesi unutulursa otomatik fallback olarak ekle
+            var definedIds = items.Select(x => x.Id).ToHashSet();
+            var nextOrder = items.Count + 1;
+            foreach (var tag in Enum.GetValues<BranchTag>())
+            {
+                var id = (int)tag;
+                if (!definedIds.Contains(id))
+                {
+                    var name = tag.ToString();
+                    items.Add(new BranchTagMetadataDto(
+                        id,
+                        name,
+                        $"tags.{char.ToLowerInvariant(name[0])}{name[1..]}",
+                        "pricetag",
+                        nextOrder++,
+                        new Dictionary<string, string> { ["tr"] = name, ["en"] = name }
+                    ));
+                }
+            }
+
+            return Ok(items.OrderBy(x => x.Order).ToList());
+        }
+
+        /// <summary>
         /// Belirtilen konuma yakın olan şubeleri mesafeye göre sıralı listeler.
+        /// Birden fazla etiket gönderildiğinde seçilen tüm etiketleri içeren (VE / AND) şubeler döner.
         /// Tags gönderilmezse veya boş/null ise etiket filtresi uygulanmaz.
         /// </summary>
         /// <remarks>

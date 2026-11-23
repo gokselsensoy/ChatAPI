@@ -106,8 +106,8 @@ namespace Infrastructure.Persistence.QueryRepositories
             var totalCount = await query.CountAsync(cancellationToken);
 
             var checkInRadiusInDegrees = GeoConstants.CheckInRadiusInMeters / GeoConstants.DegreesToMetersFactor;
-            var checkInAvailableCount = await _context.Branches
-                .AsNoTracking()
+            var checkInQuery = ApplyTagFilter(_context.Branches.AsNoTracking(), tags);
+            var checkInAvailableCount = await checkInQuery
                 .CountAsync(
                     b => b.Address.Location.Distance(userLocation) <= checkInRadiusInDegrees,
                     cancellationToken);
@@ -240,15 +240,17 @@ namespace Infrastructure.Persistence.QueryRepositories
         }
 
         /// <summary>
-        /// Tags Enum array kolonunda, seçilen etiketlerden en az birini içeren şubeleri bırakır.
+        /// Tags Enum array kolonunda, seçilen tüm etiketleri aynı anda içeren (AND) şubeleri bırakır.
         /// </summary>
         private static IQueryable<Branch> ApplyTagFilter(IQueryable<Branch> query, IReadOnlyList<BranchTag>? tags)
         {
             if (tags == null || tags.Count == 0)
                 return query;
 
-            // PostgreSQL'de array operasyonları (Any) için EF Core 8 desteği kullanılıyor
-            return query.Where(b => b.Tags.Any(t => tags.Contains(t)));
+            var distinctTags = tags.Distinct().ToArray();
+
+            // PostgreSQL'de array containment (@>) veya tüm etiketleri içerme kontrolü
+            return query.Where(b => distinctTags.All(t => b.Tags.Contains(t)));
         }
     }
 }
