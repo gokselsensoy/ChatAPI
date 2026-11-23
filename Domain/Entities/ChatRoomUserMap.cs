@@ -8,6 +8,8 @@ namespace Domain.Entities
         public Guid UserId { get; private set; }
         public DateTime JoinedAt { get; private set; }
         public DateTime? LastReadAt { get; private set; }
+        public DateTime? ClearedAt { get; private set; }
+        public bool IsMuted { get; private set; }
 
         // Navigations
         public ChatRoom? ChatRoom { get; private set; }
@@ -24,13 +26,29 @@ namespace Domain.Entities
                 ChatRoomId = chatRoomId,
                 UserId = userId,
                 JoinedAt = now,
-                LastReadAt = now
+                LastReadAt = now,
+                ClearedAt = null,
+                IsMuted = false
             };
         }
 
         public void MarkAsRead()
         {
             LastReadAt = DateTime.UtcNow;
+        }
+
+        public void ClearHistory()
+        {
+            var now = DateTime.UtcNow;
+            ClearedAt = now;
+            LastReadAt = now;
+            UpdatedDate = now;
+        }
+
+        public void SetMuted(bool isMuted)
+        {
+            IsMuted = isMuted;
+            UpdatedDate = DateTime.UtcNow;
         }
     }
 }

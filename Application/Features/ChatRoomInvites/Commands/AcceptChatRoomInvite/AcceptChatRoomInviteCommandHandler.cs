@@ -14,6 +14,7 @@ namespace Application.Features.ChatRoomInvites.Commands.AcceptChatRoomInvite
         private readonly IChatRoomInviteRepository _inviteRepository;
         private readonly IChatRoomRepository _chatRoomRepository;
         private readonly IUserQueryRepository _userQueryRepository;
+        private readonly IUserBlockRepository _userBlockRepository;
         private readonly IUnitOfWork _unitOfWork;
         private readonly INotificationService _notificationService;
 
@@ -21,12 +22,14 @@ namespace Application.Features.ChatRoomInvites.Commands.AcceptChatRoomInvite
             IChatRoomInviteRepository inviteRepository,
             IChatRoomRepository chatRoomRepository,
             IUserQueryRepository userQueryRepository,
+            IUserBlockRepository userBlockRepository,
             IUnitOfWork unitOfWork,
             INotificationService notificationService)
         {
             _inviteRepository = inviteRepository;
             _chatRoomRepository = chatRoomRepository;
             _userQueryRepository = userQueryRepository;
+            _userBlockRepository = userBlockRepository;
             _unitOfWork = unitOfWork;
             _notificationService = notificationService;
         }
@@ -39,6 +42,9 @@ namespace Application.Features.ChatRoomInvites.Commands.AcceptChatRoomInvite
 
             if (invite.InviteeUserId != request.InviteeUserId)
                 throw new Exception("Bu daveti kabul etme yetkiniz yok.");
+
+            if (await _userBlockRepository.IsBlockedEitherWayAsync(invite.InviterUserId, invite.InviteeUserId, cancellationToken))
+                throw new UnauthorizedAccessException("Engellenmiş bir kullanıcıyla sohbet başlatılamaz.");
 
             var targetType = invite.TargetRoomType is RoomType.Private or RoomType.Group
                 ? invite.TargetRoomType

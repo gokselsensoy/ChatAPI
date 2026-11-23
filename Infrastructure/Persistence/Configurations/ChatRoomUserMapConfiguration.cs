@@ -13,6 +13,9 @@ namespace Infrastructure.Persistence.Configurations
             builder.HasKey(m => new { m.ChatRoomId, m.UserId });
 
             builder.Property(m => m.LastReadAt);
+            builder.Property(m => m.ClearedAt);
+            builder.Property(m => m.IsMuted)
+                .HasDefaultValue(false);
 
             builder.HasOne(m => m.ChatRoom)
                 .WithMany(cr => cr.ChatRoomUserMaps) // ChatRoom.cs'te tanımlı

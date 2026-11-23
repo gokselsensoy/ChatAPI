@@ -1,8 +1,10 @@
-﻿using Application.Features.ChatRooms.Commands.CreateChatRoom;
+﻿using Application.Features.ChatRooms.Commands.ClearChatHistory;
+using Application.Features.ChatRooms.Commands.CreateChatRoom;
 using Application.Features.ChatRooms.Commands.CreateGroupRoom;
 using Application.Features.ChatRooms.Commands.JoinChatRoom;
 using Application.Features.ChatRooms.Commands.LeaveChatRoom;
 using Application.Features.ChatRooms.Commands.SendMessage;
+using Application.Features.ChatRooms.Commands.ToggleChatMute;
 using Application.Features.ChatRooms.DTOs;
 using Application.Features.ChatRooms.Queries.GetChatRoomMembers;
 using Application.Features.ChatRooms.Queries.GetChatRoomMessages;
@@ -136,6 +138,42 @@ namespace WebApi.Controllers
             return NoContent();
         }
 
+        [HttpPost("{roomId:guid}/clear")]
+        [ProducesResponseType(StatusCodes.Status204NoContent)]
+        public async Task<IActionResult> ClearChatHistory(Guid roomId, CancellationToken cancellationToken)
+        {
+            var user = await GetMyProfileDto();
+            if (user == null) return Unauthorized();
+
+            await _sender.Send(new ClearChatHistoryCommand
+            {
+                RoomId = roomId,
+                UserId = user.Id
+            }, cancellationToken);
+
+            return NoContent();
+        }
+
+        [HttpPut("{roomId:guid}/mute")]
+        [ProducesResponseType(typeof(ToggleChatMuteResponse), StatusCodes.Status200OK)]
+        public async Task<IActionResult> ToggleMute(
+            Guid roomId,
+            [FromBody] ToggleChatMuteRequest request,
+            CancellationToken cancellationToken)
+        {
+            var user = await GetMyProfileDto();
+            if (user == null) return Unauthorized();
+
+            var isMuted = await _sender.Send(new ToggleChatMuteCommand
+            {
+                RoomId = roomId,
+                UserId = user.Id,
+                IsMuted = request.IsMuted
+            }, cancellationToken);
+
+            return Ok(new ToggleChatMuteResponse { IsMuted = isMuted });
+        }
+
         [HttpGet("messages/{roomId:guid}")]
         [ProducesResponseType(typeof(PaginatedResponse<ChatRoomMessageDto>), StatusCodes.Status200OK)]
         public async Task<IActionResult> GetMessages(Guid roomId, [FromQuery] PaginatedRequest pagination)
@@ -218,5 +256,15 @@ namespace WebApi.Controllers
         /// Kendi mesajına da yanıt verilebilir.
         /// </summary>
         public Guid? ReplyToMessageId { get; set; }
+    }
+
+    public class ToggleChatMuteRequest
+    {
+        public bool IsMuted { get; set; }
+    }
+
+    public class ToggleChatMuteResponse
+    {
+        public bool IsMuted { get; set; }
     }
 }

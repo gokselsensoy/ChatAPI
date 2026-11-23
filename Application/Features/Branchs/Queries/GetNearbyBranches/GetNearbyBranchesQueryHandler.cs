@@ -24,6 +24,8 @@ namespace Application.Features.Branchs.Queries.GetNearbyBranches
                 request.CurrentUserId,
                 request.Tags,
                 request, // Pagination bilgileri burada
+                request.BranchType,
+                request.OnlyCheckInAvailable,
                 cancellationToken
             );
         }

@@ -20,6 +20,7 @@ namespace Application.Features.ChatRoomInvites.Commands.CreateChatRoomInvite
         private readonly IChatRoomRepository _chatRoomRepository;
         private readonly IUserQueryRepository _userQueryRepository;
         private readonly IBranchQueryRepository _branchQueryRepository;
+        private readonly IUserBlockRepository _userBlockRepository;
         private readonly IUnitOfWork _unitOfWork;
         private readonly INotificationService _notificationService;
         private readonly IPushNotificationService _pushNotificationService;
@@ -30,6 +31,7 @@ namespace Application.Features.ChatRoomInvites.Commands.CreateChatRoomInvite
             IChatRoomRepository chatRoomRepository,
             IUserQueryRepository userQueryRepository,
             IBranchQueryRepository branchQueryRepository,
+            IUserBlockRepository userBlockRepository,
             IUnitOfWork unitOfWork,
             INotificationService notificationService,
             IPushNotificationService pushNotificationService,
@@ -39,6 +41,7 @@ namespace Application.Features.ChatRoomInvites.Commands.CreateChatRoomInvite
             _chatRoomRepository = chatRoomRepository;
             _userQueryRepository = userQueryRepository;
             _branchQueryRepository = branchQueryRepository;
+            _userBlockRepository = userBlockRepository;
             _unitOfWork = unitOfWork;
             _notificationService = notificationService;
             _pushNotificationService = pushNotificationService;
@@ -49,6 +52,9 @@ namespace Application.Features.ChatRoomInvites.Commands.CreateChatRoomInvite
         {
             if (request.TargetRoomType is not (RoomType.Private or RoomType.Group))
                 throw new Exception("Davet tipi yalnızca Private veya Group olabilir.");
+
+            if (await _userBlockRepository.IsBlockedEitherWayAsync(request.InviterUserId, request.InviteeUserId, cancellationToken))
+                throw new UnauthorizedAccessException("Bu kullanıcıya davet gönderemezsiniz.");
 
             var inviteeProfile = await _userQueryRepository.GetByIdAsync(request.InviteeUserId, cancellationToken);
             if (inviteeProfile == null)

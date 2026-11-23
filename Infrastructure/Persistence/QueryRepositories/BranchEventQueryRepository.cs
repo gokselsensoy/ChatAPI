@@ -23,9 +23,10 @@ namespace Infrastructure.Persistence.QueryRepositories
         {
             // AsNoTracking() ile okuma performansını artırıyoruz çünkü veri güncellenmeyecek.
             return await _context.BranchEvents
-                .Include(e => e.Participants) // Katılımcı verilerini eklemezsek buton durumlarını hesaplayamayız
+                .Include(e => e.Participants)
+                    .ThenInclude(p => p.User)
                 .AsNoTracking()
-                .Where(e => e.BranchId == branchId)
+                .Where(e => e.BranchId == branchId && !e.IsDeleted)
                 .OrderBy(e => e.StartDate)
                 .ToListAsync(cancellationToken);
         }

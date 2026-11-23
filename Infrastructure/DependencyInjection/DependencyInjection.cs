@@ -65,6 +65,8 @@ namespace Infrastructure.DependencyInjection
             services.AddScoped<IMenuQueryRepository, MenuQueryRepository>();
 
             services.AddScoped<IUserDeviceTokenRepository, UserDeviceTokenRepository>();
+            services.AddScoped<IUserBlockRepository, UserBlockRepository>();
+            services.AddScoped<IUserReportRepository, UserReportRepository>();
 
             // 5. Diğer servisler (Email vb.)
             // services.AddTransient<IEmailService, EmailService>();

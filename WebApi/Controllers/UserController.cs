@@ -1,10 +1,13 @@
 ﻿using Application.Exceptions;
+using Application.Features.Users.Commands.BlockUser;
 using Application.Features.Users.Commands.CheckIn;
 using Application.Features.Users.Commands.CheckOut;
 using Application.Features.Users.Commands.CheckOutControl;
+using Application.Features.Users.Commands.ReportUser;
 using Application.Features.Users.Commands.UpdateMyProfile;
 using Application.Features.Users.DTOs;
 using Application.Features.Users.Queries.GetMyProfile;
+using Domain.Enums;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -125,6 +128,44 @@ namespace WebApi.Controllers
             return Ok(new { Status = "Active", Message = "Konum güncellendi, hala mekandasınız." });
         }
 
+        [HttpPost("block")]
+        [ProducesResponseType(StatusCodes.Status204NoContent)]
+        public async Task<IActionResult> BlockUser([FromBody] BlockUserRequest request, CancellationToken cancellationToken)
+        {
+            var (userId, _) = await GetUserIdsFromToken();
+            if (userId == Guid.Empty)
+                return Unauthorized("Geçersiz token.");
+
+            await _sender.Send(new BlockUserCommand
+            {
+                BlockerUserId = userId,
+                BlockedUserId = request.BlockedUserId
+            }, cancellationToken);
+
+            return NoContent();
+        }
+
+        [HttpPost("report")]
+        [ProducesResponseType(typeof(ReportUserResponse), StatusCodes.Status200OK)]
+        public async Task<IActionResult> ReportUser([FromBody] ReportUserRequest request, CancellationToken cancellationToken)
+        {
+            var (userId, _) = await GetUserIdsFromToken();
+            if (userId == Guid.Empty)
+                return Unauthorized("Geçersiz token.");
+
+            var reportId = await _sender.Send(new ReportUserCommand
+            {
+                ReporterUserId = userId,
+                ReportedUserId = request.ReportedUserId,
+                ChatRoomId = request.ChatRoomId,
+                MessageId = request.MessageId,
+                Reason = request.Reason,
+                Description = request.Description
+            }, cancellationToken);
+
+            return Ok(new ReportUserResponse { ReportId = reportId });
+        }
+
         // --- Yardımcı Metot: Token'dan User ID Okuma ---
         private Guid GetCurrentUserId()
         {
@@ -148,6 +189,25 @@ namespace WebApi.Controllers
         {
             public decimal Latitude { get; set; }
             public decimal Longitude { get; set; }
+        }
+
+        public class BlockUserRequest
+        {
+            public Guid BlockedUserId { get; set; }
+        }
+
+        public class ReportUserRequest
+        {
+            public Guid ReportedUserId { get; set; }
+            public Guid? ChatRoomId { get; set; }
+            public Guid? MessageId { get; set; }
+            public ReportReason Reason { get; set; }
+            public string? Description { get; set; }
+        }
+
+        public class ReportUserResponse
+        {
+            public Guid ReportId { get; set; }
         }
 
         #region Helper Methods
