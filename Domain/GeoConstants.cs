@@ -12,7 +12,8 @@ namespace Domain
         /// <summary>
         /// Yakındaki şubeleri listelerken kullanılan varsayılan keşif yarıçapı.
         /// </summary>
-        public const int NearbyBranchesDefaultRadiusInMeters = 1000;
+        public const int NearbyBranchesDefaultRadiusInMeters = 10000;
+
 
         /// <summary>
         /// SRID 4326 derece mesafesini metreye çevirmek için yaklaşık katsayı.
