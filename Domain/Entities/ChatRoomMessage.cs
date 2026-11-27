@@ -38,13 +38,33 @@ namespace Domain.Entities
             };
         }
 
+        public (bool IsAdded, string? RemovedEmoji) ToggleReaction(Guid userId, string emoji)
+        {
+            var existingReaction = Reactions.FirstOrDefault(r => r.UserId == userId);
+
+            // 1. Kullanıcının bu mesajda hiç reaksiyonu yoksa: Yeni ekle
+            if (existingReaction == null)
+            {
+                Reactions.Add(MessageReaction.Create(Id, userId, emoji));
+                return (true, null);
+            }
+
+            // 2. Kullanıcının reaksiyonu aynı emoji ise: Reaksiyonu kaldır (Toggle Off)
+            if (existingReaction.Emoji == emoji)
+            {
+                Reactions.Remove(existingReaction);
+                return (false, null);
+            }
+
+            // 3. Kullanıcının reaksiyonu farklı bir emoji ise: Eski emojiyi yenisiyle değiştir (Swap)
+            string previousEmoji = existingReaction.Emoji;
+            existingReaction.UpdateEmoji(emoji);
+            return (true, previousEmoji);
+        }
+
         public void AddReaction(Guid userId, string emoji)
         {
-            // İş kuralı: Aynı kullanıcı, aynı mesaja, aynı emojiyi zaten bırakmışsa tekrar ekleme
-            if (Reactions.Any(r => r.UserId == userId && r.Emoji == emoji))
-                return;
-
-            Reactions.Add(MessageReaction.Create(Id, userId, emoji));
+            ToggleReaction(userId, emoji);
         }
 
         public void RemoveReaction(Guid userId, string emoji)

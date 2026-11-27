@@ -29,5 +29,13 @@ namespace Domain.Entities
             };
         }
 
+        public void UpdateEmoji(string emoji)
+        {
+            if (string.IsNullOrWhiteSpace(emoji)) throw new ArgumentException("Emoji boş olamaz.");
+
+            Emoji = emoji;
+            UpdatedDate = DateTime.UtcNow;
+        }
+
     }
 }

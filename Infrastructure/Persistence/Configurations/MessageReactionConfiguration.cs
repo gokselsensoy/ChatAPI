@@ -29,9 +29,9 @@ namespace Infrastructure.Persistence.Configurations
                 .HasForeignKey(x => x.UserId)
                 .OnDelete(DeleteBehavior.Restrict);
 
-            // Çok Önemli Mirari Kural: Aynı mesaja, aynı kullanıcı, aynı emojiden sadece 1 tane atabilsin!
+            // Çok Önemli Mimari Kural: Aynı mesaja, aynı kullanıcı sadece 1 tane emoji reaksiyonu bırakabilsin!
             // (Veritabanı seviyesinde koruma kalkanı)
-            builder.HasIndex(x => new { x.ChatRoomMessageId, x.UserId, x.Emoji }).IsUnique();
+            builder.HasIndex(x => new { x.ChatRoomMessageId, x.UserId }).IsUnique();
         }
     }
 }

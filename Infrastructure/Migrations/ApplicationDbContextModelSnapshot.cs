@@ -652,7 +652,7 @@ namespace Infrastructure.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.HasIndex("ChatRoomMessageId", "UserId", "Emoji")
+                    b.HasIndex("ChatRoomMessageId", "UserId")
                         .IsUnique();
 
                     b.ToTable("MessageReactions", (string)null);
